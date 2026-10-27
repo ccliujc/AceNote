@@ -1,0 +1,35 @@
+{
+  "name": "acenote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first desktop tennis-themed todo companion.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "overrides": {
+    "multer": "2.5.0"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,desktop \"npm run dev --workspace @acenote/server\" \"npm run dev --workspace @acenote/desktop\"",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "9.20.0",
+    "concurrently": "9.1.2",
+    "eslint": "9.20.1",
+    "eslint-plugin-react-hooks": "5.1.0",
+    "globals": "15.15.0",
+    "prettier": "3.5.3",
+    "typescript": "5.7.3",
+    "typescript-eslint": "8.24.1"
+  }
+}
