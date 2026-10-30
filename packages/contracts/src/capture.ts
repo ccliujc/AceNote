@@ -14,6 +14,9 @@ export const errorCodeSchema = z.enum([
   'PARSE_INVALID_RESPONSE',
   'PARSE_NOT_CONFIGURED',
   'CONCURRENT_EDIT',
+  'INVALID_TRANSITION',
+  'NO_MATCH',
+  'MULTIPLE_MATCHES',
   'UNKNOWN_ERROR',
 ]);
 

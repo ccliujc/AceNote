@@ -1,0 +1,4 @@
+export const PET_WIDTH = 220;
+export const PET_CHARACTER_HEIGHT = 220;
+export const PET_MESSAGE_HEIGHT = 120;
+export const PET_HEIGHT = PET_CHARACTER_HEIGHT + PET_MESSAGE_HEIGHT;

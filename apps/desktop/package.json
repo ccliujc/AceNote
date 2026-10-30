@@ -5,6 +5,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "npm run rebuild && electron-vite dev",
+    "start": "npm run rebuild && electron .",
     "build": "electron-vite build",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",

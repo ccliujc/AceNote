@@ -2,16 +2,19 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import {
   errorCodeSchema,
+  lifecycleTaskSchema,
   parsedTaskSchema,
   rawTextSchema,
   taskPatchSchema,
-  taskSchema,
   type ErrorCode,
+  type LifecycleTask,
   type ParseStatus,
   type ParsedTask,
-  type Task,
   type TaskPatch,
+  type TaskStatus,
+  type TaskStatusFilter,
 } from '@acenote/contracts';
+import { localDate } from './local-date';
 
 interface RepositoryOptions {
   clock?: () => Date;
@@ -35,10 +38,15 @@ interface TaskRow {
   updated_at: string;
   edited_at: string | null;
   revision: number;
+  status: TaskStatus;
+  completed_at: string | null;
+  completion_date: string | null;
+  completion_time_zone: string | null;
+  archived_at: string | null;
 }
 
-function toTask(row: TaskRow): Task {
-  return taskSchema.parse({
+function toTask(row: TaskRow): LifecycleTask {
+  return lifecycleTaskSchema.parse({
     id: row.id,
     rawText: row.raw_text,
     title: row.title,
@@ -54,18 +62,12 @@ function toTask(row: TaskRow): Task {
     updatedAt: row.updated_at,
     editedAt: row.edited_at,
     revision: row.revision,
+    status: row.status,
+    completedAt: row.completed_at,
+    completionDate: row.completion_date,
+    completionTimeZone: row.completion_time_zone,
+    archivedAt: row.archived_at,
   });
-}
-
-function localDate(date: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
 }
 
 export class TaskRepository {
@@ -79,11 +81,13 @@ export class TaskRepository {
     this.timeZone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
 
-  create(rawInput: string): Task {
+  create(rawInput: string, options: { id?: string; recordedAt?: Date; timeZone?: string } = {}): LifecycleTask {
     const rawText = rawTextSchema.parse(rawInput);
-    const id = this.idGenerator();
-    const now = this.clock().toISOString();
-    const recordDate = localDate(this.clock(), this.timeZone);
+    const id = options.id ?? this.idGenerator();
+    const timeZone = options.timeZone ?? this.timeZone;
+    const recordedAt = options.recordedAt ?? this.clock();
+    const now = recordedAt.toISOString();
+    const recordDate = localDate(recordedAt, timeZone);
     this.database.transaction(() => {
       this.database.prepare(`
         INSERT INTO tasks (
@@ -91,23 +95,37 @@ export class TaskRepository {
           time_zone, contact, parse_status, parse_error, created_at, updated_at, edited_at, revision
         ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, NULL, 'pending', NULL, ?, ?, NULL, 0)
         ON CONFLICT(id) DO NOTHING
-      `).run(id, rawText, rawText.slice(0, 200), now, recordDate, this.timeZone, now, now);
+      `).run(id, rawText, rawText.slice(0, 200), now, recordDate, timeZone, now, now);
     })();
     return this.get(id);
   }
 
-  list(): Task[] {
+  list(): LifecycleTask[] {
     const rows = this.database.prepare('SELECT * FROM tasks ORDER BY created_at DESC, id DESC').all() as TaskRow[];
     return rows.map(toTask);
   }
 
-  get(id: string): Task {
+  get(id: string): LifecycleTask {
     const row = this.database.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow | undefined;
     if (!row) throw new Error('NOT_FOUND');
     return toTask(row);
   }
 
-  update(id: string, input: TaskPatch, expectedRevision: number): Task {
+  listByRecordDate(date: string, status: TaskStatusFilter = 'all'): LifecycleTask[] {
+    const rows = status === 'all'
+      ? this.database.prepare('SELECT * FROM tasks WHERE record_date = ? ORDER BY created_at DESC, id DESC').all(date)
+      : this.database.prepare('SELECT * FROM tasks WHERE record_date = ? AND status = ? ORDER BY created_at DESC, id DESC').all(date, status);
+    return (rows as TaskRow[]).map(toTask);
+  }
+
+  dailyCompletionSummary(date: string): { date: string; completedCount: number } {
+    const row = this.database.prepare(
+      "SELECT COUNT(*) AS count FROM tasks WHERE status = 'completed' AND completion_date = ?",
+    ).get(date) as { count: number };
+    return { date, completedCount: row.count };
+  }
+
+  update(id: string, input: TaskPatch, expectedRevision: number): LifecycleTask {
     const patch = taskPatchSchema.parse(input);
     const current = this.get(id);
     if (current.revision !== expectedRevision) throw new Error('CONCURRENT_EDIT');
@@ -127,13 +145,13 @@ export class TaskRepository {
     return this.get(id);
   }
 
-  setParseStatus(id: string, status: ParseStatus, error: ErrorCode | null = null): Task {
+  setParseStatus(id: string, status: ParseStatus, error: ErrorCode | null = null): LifecycleTask {
     this.database.prepare('UPDATE tasks SET parse_status = ?, parse_error = ?, updated_at = ? WHERE id = ?')
       .run(status, error, this.clock().toISOString(), id);
     return this.get(id);
   }
 
-  applyParseResult(id: string, expectedRevision: number, input: ParsedTask): Task | null {
+  applyParseResult(id: string, expectedRevision: number, input: ParsedTask): LifecycleTask | null {
     const result = parsedTaskSchema.parse(input);
     const updated = this.database.prepare(`
       UPDATE tasks SET title = ?, due_date = ?, due_time = ?, contact = ?,
@@ -141,5 +159,46 @@ export class TaskRepository {
       WHERE id = ? AND revision = ?
     `).run(result.title, result.dueDate, result.dueTime, result.contact, this.clock().toISOString(), id, expectedRevision);
     return updated.changes === 0 ? null : this.get(id);
+  }
+
+  complete(id: string, expectedRevision: number): LifecycleTask {
+    const current = this.get(id);
+    if (current.status !== 'open') throw new Error('INVALID_TRANSITION');
+    if (current.revision !== expectedRevision) throw new Error('CONCURRENT_EDIT');
+    const now = new Date(this.clock());
+    const changed = this.database.prepare(`
+      UPDATE tasks SET status = 'completed', completed_at = ?, completion_date = ?,
+        completion_time_zone = ?, updated_at = ?, revision = revision + 1
+      WHERE id = ? AND revision = ? AND status = 'open'
+    `).run(now.toISOString(), localDate(now, this.timeZone), this.timeZone, now.toISOString(), id, expectedRevision);
+    if (changed.changes === 0) throw new Error('CONCURRENT_EDIT');
+    return this.get(id);
+  }
+
+  archive(id: string, expectedRevision: number): LifecycleTask {
+    const current = this.get(id);
+    if (current.status !== 'open') throw new Error('INVALID_TRANSITION');
+    if (current.revision !== expectedRevision) throw new Error('CONCURRENT_EDIT');
+    const now = this.clock().toISOString();
+    const changed = this.database.prepare(`
+      UPDATE tasks SET status = 'archived', archived_at = ?, updated_at = ?, revision = revision + 1
+      WHERE id = ? AND revision = ? AND status = 'open'
+    `).run(now, now, id, expectedRevision);
+    if (changed.changes === 0) throw new Error('CONCURRENT_EDIT');
+    return this.get(id);
+  }
+
+  restore(id: string, expectedRevision: number): LifecycleTask {
+    const current = this.get(id);
+    if (current.status === 'open') throw new Error('INVALID_TRANSITION');
+    if (current.revision !== expectedRevision) throw new Error('CONCURRENT_EDIT');
+    const now = this.clock().toISOString();
+    const changed = this.database.prepare(`
+      UPDATE tasks SET status = 'open', completed_at = NULL, completion_date = NULL,
+        completion_time_zone = NULL, archived_at = NULL, updated_at = ?, revision = revision + 1
+      WHERE id = ? AND revision = ? AND status = ?
+    `).run(now, id, expectedRevision, current.status);
+    if (changed.changes === 0) throw new Error('CONCURRENT_EDIT');
+    return this.get(id);
   }
 }

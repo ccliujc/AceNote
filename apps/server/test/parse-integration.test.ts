@@ -21,7 +21,7 @@ afterEach(async () => {
 
 describe('parse integration', () => {
   it('sends date context without exposing the API key', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ title: '写周报', dueDate: '2026-10-26', dueTime: null, contact: null }) } }] }), { status: 200 }));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ intent: 'create', task: { title: '写周报', dueDate: '2026-10-26', dueTime: null, contact: null } }) } }] }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     await request(app.getHttpServer()).post('/v1/parse').send(input).expect(201);
     const call = fetchMock.mock.calls[0];

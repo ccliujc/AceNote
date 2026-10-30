@@ -1,7 +1,9 @@
 import {
   errorCodeSchema,
+  parseIntentResponseSchema,
   parseResponseSchema,
   type ErrorCode,
+  type ParseIntentResult,
   type ParsedTask,
   type ParseRequest,
   type ReparseMode,
@@ -35,6 +37,31 @@ export function createHttpParser(serverUrl = process.env.ACENOTE_PARSE_URL ?? 'h
       throw new ParseClientError(code);
     }
     const parsed = parseResponseSchema.parse(await response.json());
+    if (parsed.requestId !== request.requestId) throw new ParseClientError('PARSE_INVALID_RESPONSE');
+    return parsed.result;
+  };
+}
+
+export type IntentClient = (request: ParseRequest) => Promise<ParseIntentResult>;
+
+export function createIntentParser(serverUrl = process.env.ACENOTE_PARSE_URL ?? 'http://127.0.0.1:3777'): IntentClient {
+  return async (request) => {
+    let response: Response;
+    try {
+      response = await fetch(`${serverUrl}/v1/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(21000),
+      });
+    } catch {
+      throw new ParseClientError('NETWORK_ERROR');
+    }
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { code?: unknown } | null;
+      throw new ParseClientError(errorCodeSchema.catch('PARSE_UNAVAILABLE').parse(body?.code));
+    }
+    const parsed = parseIntentResponseSchema.parse(await response.json());
     if (parsed.requestId !== request.requestId) throw new ParseClientError('PARSE_INVALID_RESPONSE');
     return parsed.result;
   };

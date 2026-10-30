@@ -1,0 +1,69 @@
+:root {
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --ink: #12325a;
+  --muted: #4e6782;
+  --canvas: #edf5fd;
+  --surface: #fbfdff;
+  --brand: #006cc7;
+  --brand-strong: #075a9f;
+  --brand-soft: #e1f0fd;
+  --composer-background: linear-gradient(135deg, #0767aa, #064d8c);
+  --on-brand: #f7fcff;
+  --on-brand-muted: #d1e9fb;
+  --accent: #c5eaff;
+  --accent-hover: #e0f4ff;
+  --border: #c9dcee;
+  --control-border: #6b8baa;
+  --focus: #0064be;
+  --success: #095da6;
+  --success-soft: #e2f0ff;
+  --archived: #516a83;
+  --archived-soft: #e8eff6;
+  --selected: #e7f4ff;
+  --danger: #9b3e34;
+  --on-dark-danger: #ffe1dc;
+  --danger-soft: #fff0eb;
+  --danger-border: #d8a79c;
+  --warning: #80521b;
+  --warning-soft: #fff3dc;
+  --warning-border: #d7bb89;
+  --court-panel: #dceefc;
+  --court: #1674b0;
+  --court-lines: #f1faff;
+  --court-line-soft: rgba(241, 250, 255, 0.6);
+  --ball: #e1f262;
+  --radius: 12px;
+  font-family: var(--font-ui);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

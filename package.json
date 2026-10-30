@@ -16,6 +16,7 @@
   },
   "scripts": {
     "dev": "concurrently -k -n server,desktop \"npm run dev --workspace @acenote/server\" \"npm run dev --workspace @acenote/desktop\"",
+    "start": "concurrently -k -n server,desktop \"npm run start --workspace @acenote/server\" \"npm run start --workspace @acenote/desktop\"",
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
