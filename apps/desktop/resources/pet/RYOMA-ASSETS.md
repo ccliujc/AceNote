@@ -1,5 +1,7 @@
 # 越前龙马桌宠素材与澳网蓝主题
 
+2026-10-30：人物头身比例已按用户要求调整，当前素材和编辑提示词见 [RYOMA-PROPORTIONS.md](RYOMA-PROPORTIONS.md)。下文保留初版素材来源与提示词。
+
 2026-10-29，按用户要求替换人物。生成方式：**内置 imagegen**；没有使用 CLI/API fallback。以[官方青学角色页](https://tenipuri.jp/character/seigaku)及其[人物图](https://tenipuri.jp/assets/img/character/img/seigaku_ryoma.gif)为身份参考，制作适合透明桌宠的 Q 版适配图。蓝色球场参考 [Australian Open：Green to blue](https://ausopen.com/history/memorable-moments/2008-green-blue)，具体色值为本项目适配。
 
 ## 应用资源

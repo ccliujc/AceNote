@@ -2,6 +2,8 @@
 
 后续完成气泡的布局与关闭规则以 [SPEC-pet-message.md](SPEC-pet-message.md) 为准。
 
+2026-10-30：按用户要求统一缩小三态人物的头帽比例，采用更自然的少年体态；素材及提示词见 [RYOMA-PROPORTIONS.md](../apps/desktop/resources/pet/RYOMA-PROPORTIONS.md)。
+
 状态：2026-10-29 用户直接要求实施。覆盖早期深绿/奶油色主题和通用网球人物素材；浮窗优先、大窗口关闭独立、手动退出等规则继续遵循 `SPEC-floating-first.md`。
 
 ## 目标

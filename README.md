@@ -12,7 +12,7 @@ AceNote 采用“桌宠 + 日程浮窗”为主、完整记录窗口按需打开
 
 点击浮窗中未完成事项前的圆圈即可直接完成任务，同步取消提醒、更新完成数并触发人物动效；这个操作不需要 DeepSeek 密钥或网络，也会保留输入框里的草稿。误操作可在完整记录中恢复事项。
 
-桌宠使用越前龙马形象的持拍、左手击球、庆祝三态透明 PNG，主窗口、日程浮窗和球场统一为澳网蓝主题。浮窗支持输入日程和完成指令，手动收起后保留本次会话草稿。窗口均通过上下文隔离的 preload 通信，不增加托盘或开机启动。素材来源和提示词见 [RYOMA-ASSETS.md](apps/desktop/resources/pet/RYOMA-ASSETS.md)。
+桌宠使用越前龙马形象的持拍、左手击球、庆祝三态透明 PNG，头帽比例已适度缩小，主窗口、日程浮窗和球场统一为澳网蓝主题。浮窗支持输入日程和完成指令，手动收起后保留本次会话草稿。窗口均通过上下文隔离的 preload 通信，不增加托盘或开机启动。当前素材和提示词见 [RYOMA-PROPORTIONS.md](apps/desktop/resources/pet/RYOMA-PROPORTIONS.md)，初版来源见 [RYOMA-ASSETS.md](apps/desktop/resources/pet/RYOMA-ASSETS.md)。
 
 ## 技术栈
 
