@@ -51,6 +51,34 @@ function serviceWith(
 }
 
 describe('reminder lifecycle linkage', () => {
+  it('cancels the existing reminder when manually completing without a model call', async () => {
+    const task = tasks.create('吃饭');
+    const scheduled = tasks.update(
+      task.id,
+      { dueDate: '2026-10-28', dueTime: '12:00' },
+      task.revision,
+    );
+    const reminderService = new ReminderService(tasks, reminders, {
+      clock: () => now,
+    });
+    reminderService.syncTask(scheduled.id);
+    expect(reminders.getForTask(scheduled.id).status).toBe('scheduled');
+    const parser = vi.fn();
+    const service = new LifecycleService(
+      tasks,
+      intakes,
+      parser,
+      reminderService,
+    );
+    const completed = await service.completeTask(
+      scheduled.id,
+      scheduled.revision,
+    );
+    expect(completed.status).toBe('completed');
+    expect(reminders.getForTask(completed.id).status).toBe('cancelled');
+    expect(tasks.dailyCompletionSummary('2026-10-28').completedCount).toBe(1);
+    expect(parser).not.toHaveBeenCalled();
+  });
   it('stores a parsed time-only task and fires its today reminder once', async () => {
     let clock = new Date('2026-10-30T03:00:00Z');
     const repository = new TaskRepository(database, {

@@ -156,17 +156,17 @@ body,
   flex-shrink: 0;
   justify-content: space-between;
   align-items: center;
-  margin: 17px 20px 10px;
+  margin: 10px 20px 4px;
   color: var(--quick-muted);
   font-size: 11px;
 }
 .today-summary h2 {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 12px;
+  line-height: 18px;
   font-weight: 600;
 }
 .today-summary h2 span {
@@ -176,7 +176,7 @@ body,
 .today-list {
   flex: 1;
   min-height: 0;
-  padding: 0 18px 12px;
+  padding: 0 18px 8px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #d5deeb transparent;
@@ -184,20 +184,61 @@ body,
 .today-task {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 13px 2px;
+  gap: 9px;
+  padding: 7px 2px;
 }
 .today-task-marker {
   display: grid;
   place-items: center;
   position: relative;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   margin-top: 2px;
   color: var(--brand);
   border: 1.5px solid #7c8ca2;
   border-radius: 50%;
+}
+.today-complete-button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: -2px -4px;
+  padding: 0;
+  color: var(--brand);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+}
+.today-complete-button .today-task-marker {
+  margin-top: 0;
+}
+.today-complete-button:hover:not(:disabled) .today-task-marker {
+  border-color: var(--brand);
+  background: var(--quick-soft);
+}
+.today-complete-button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.today-complete-button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.today-complete-button[aria-busy='true'] {
+  cursor: progress;
+}
+.today-complete-button[aria-busy='true'] .today-task-marker {
+  border-color: var(--brand);
+  border-right-color: transparent;
+  animation: completing-task 0.7s linear infinite;
+}
+@keyframes completing-task {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .completed .today-task-marker {
   border-color: var(--brand);
@@ -212,7 +253,7 @@ body,
 }
 .archived .today-task-marker::after {
   content: '';
-  width: 12px;
+  width: 10px;
   height: 1.5px;
   background: #7c8ca2;
   transform: rotate(-45deg);
@@ -223,9 +264,9 @@ body,
 .today-task-content > strong {
   display: block;
   color: var(--quick-ink);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 24px;
+  line-height: 20px;
   overflow-wrap: anywhere;
 }
 .today-task.completed .today-task-content > strong,
@@ -236,20 +277,20 @@ body,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
+  gap: 4px 6px;
   color: var(--quick-muted);
   font-size: 11px;
-  line-height: 18px;
+  line-height: 16px;
 }
 .today-task-meta:not(:empty) {
-  margin-top: 6px;
+  margin-top: 3px;
 }
 .today-time-chip {
-  padding: 1px 8px;
+  padding: 1px 6px;
   color: var(--brand-strong);
   background: var(--quick-soft);
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }

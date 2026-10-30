@@ -15,6 +15,12 @@ const today: QuickInputApi = {
     ipcRenderer.invoke('lifecycle:convert', intakeId) as Promise<LifecycleTask>,
   selectCandidate: (input) =>
     ipcRenderer.invoke('lifecycle:select', input) as Promise<LifecycleTask>,
+  completeTask: (id, revision) =>
+    ipcRenderer.invoke(
+      'lifecycle:complete',
+      id,
+      revision,
+    ) as Promise<LifecycleTask>,
   listTasks: (date: string) =>
     ipcRenderer.invoke('lifecycle:list', date, 'all') as Promise<
       LifecycleTask[]

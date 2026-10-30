@@ -43,6 +43,7 @@ function api(overrides: Partial<LifecycleApi> = {}): LifecycleApi {
     getDailySummary: vi
       .fn()
       .mockResolvedValue({ date: task.recordDate, completedCount: 3 }),
+    completeTask: vi.fn(),
     selectCandidate: vi
       .fn()
       .mockResolvedValue({ ...task, status: 'completed' }),

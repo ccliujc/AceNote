@@ -19,6 +19,7 @@ function makeApi(tasks: LifecycleTask[] = []): Window['today'] {
     submitInput: vi.fn(),
     retryInput: vi.fn(),
     convertInputToTask: vi.fn(),
+    completeTask: vi.fn(),
     selectCandidate: vi.fn(),
     getSummary: vi
       .fn()
@@ -29,6 +30,130 @@ function makeApi(tasks: LifecycleTask[] = []): Window['today'] {
   };
 }
 describe('TodayPanelApp', () => {
+  it('completes the clicked task, refreshes the count and preserves the input draft', async () => {
+    const task = {
+      id: '11111111-1111-4111-8111-111111111111',
+      title: '吃饭',
+      revision: 4,
+      status: 'open',
+      dueDate: null,
+      dueTime: null,
+    } as LifecycleTask;
+    const completed = {
+      ...task,
+      status: 'completed',
+      revision: 5,
+    } as LifecycleTask;
+    const api = makeApi([task]);
+    vi.mocked(api.completeTask).mockImplementation(async () => {
+      vi.mocked(api.listTasks).mockResolvedValue([completed]);
+      vi.mocked(api.getSummary).mockResolvedValue({
+        date: '2026-10-30',
+        completedCount: 1,
+      });
+      return completed;
+    });
+    render(<TodayPanelApp api={api} />);
+    const circle = await screen.findByRole('button', {
+      name: '完成事项：吃饭',
+    });
+    await userEvent.type(screen.getByRole('textbox'), '还没提交的会议草稿');
+    await userEvent.click(circle);
+    expect(
+      await screen.findByRole('button', { name: '已完成：吃饭' }),
+    ).toBeDisabled();
+    expect(screen.getByText('已完成 1')).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('还没提交的会议草稿');
+    expect(api.completeTask).toHaveBeenCalledExactlyOnceWith(task.id, 4);
+    expect(api.submitInput).not.toHaveBeenCalled();
+  });
+  it('blocks duplicate completion and hiding, then retains an unfinished task and draft on failure', async () => {
+    const task = {
+      id: 'task-1',
+      title: '吃饭',
+      revision: 4,
+      status: 'open',
+      dueDate: null,
+      dueTime: null,
+    } as LifecycleTask;
+    const api = makeApi([task]);
+    let reject!: (reason: Error) => void;
+    vi.mocked(api.completeTask).mockReturnValue(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+    );
+    render(<TodayPanelApp api={api} />);
+    const circle = await screen.findByRole('button', {
+      name: '完成事项：吃饭',
+    });
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: '保留草稿' },
+    });
+    fireEvent.click(circle);
+    fireEvent.click(circle);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(api.completeTask).toHaveBeenCalledTimes(1);
+    expect(api.close).not.toHaveBeenCalled();
+    expect(circle).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: '记录' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '收起日程浮窗' })).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: '已完成：吃饭' }),
+    ).not.toBeInTheDocument();
+    await act(async () => reject(new Error('CONCURRENT_EDIT')));
+    expect(await screen.findByRole('alert')).toHaveTextContent('完成失败');
+    expect(
+      screen.getByRole('button', { name: '完成事项：吃饭' }),
+    ).toBeEnabled();
+    expect(screen.getByRole('textbox')).toHaveValue('保留草稿');
+  });
+  it('supports keyboard completion and keeps completed or archived circles disabled', async () => {
+    const task = {
+      id: 'task-1',
+      title: '吃饭',
+      revision: 1,
+      status: 'open',
+      dueDate: null,
+      dueTime: null,
+    } as LifecycleTask;
+    const done = {
+      ...task,
+      id: 'task-2',
+      title: '已经完成',
+      status: 'completed',
+    } as LifecycleTask;
+    const archived = {
+      ...task,
+      id: 'task-3',
+      title: '已经归档',
+      status: 'archived',
+    } as LifecycleTask;
+    const api = makeApi([task, done, archived]);
+    vi.mocked(api.completeTask).mockResolvedValue({
+      ...task,
+      status: 'completed',
+    });
+    render(<TodayPanelApp api={api} />);
+    const circle = await screen.findByRole('button', {
+      name: '完成事项：吃饭',
+    });
+    expect(
+      screen.getByRole('button', { name: '已完成：已经完成' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: '已归档：已经归档' }),
+    ).toBeDisabled();
+    circle.focus();
+    await userEvent.keyboard('[Space]');
+    expect(
+      await screen.findByText('“吃饭”已完成，漂亮的一分！'),
+    ).toBeInTheDocument();
+    expect(api.completeTask).toHaveBeenCalledExactlyOnceWith(
+      task.id,
+      task.revision,
+    );
+  });
   it('confirms a future today time in the saved message and task chip', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-30T03:00:00Z'));

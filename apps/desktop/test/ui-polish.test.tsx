@@ -55,6 +55,7 @@ function setup(overrides: Partial<LifecycleApi> = {}) {
       .mockResolvedValue({ kind: 'task', intakeId: task.id, task }),
     retryInput: vi.fn(),
     convertInputToTask: vi.fn().mockResolvedValue(task),
+    completeTask: vi.fn(),
     selectCandidate: vi.fn(),
     archiveTask: vi.fn(),
     restoreTask: vi.fn(),

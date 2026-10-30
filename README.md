@@ -10,6 +10,8 @@ AceNote 是面向 macOS 和 Windows 的本地优先桌面待办工具。当前�
 
 AceNote 采用“桌宠 + 日程浮窗”为主、完整记录窗口按需打开的形态：启动不弹大窗口，单击或双击网球人物只打开日程浮窗；点击“打开完整记录”或桌宠右键菜单才显示大窗口。关闭大窗口仅收起该窗口，浮窗和桌宠继续运行；浮窗失焦也不会自动消失。需要退出应用时，右键桌宠选择“退出 AceNote”或使用系统退出命令（macOS 为 Cmd+Q），此时才关闭所有窗口并停止提醒。
 
+点击浮窗中未完成事项前的圆圈即可直接完成任务，同步取消提醒、更新完成数并触发人物动效；这个操作不需要 DeepSeek 密钥或网络，也会保留输入框里的草稿。误操作可在完整记录中恢复事项。
+
 桌宠使用越前龙马形象的持拍、左手击球、庆祝三态透明 PNG，主窗口、日程浮窗和球场统一为澳网蓝主题。浮窗支持输入日程和完成指令，手动收起后保留本次会话草稿。窗口均通过上下文隔离的 preload 通信，不增加托盘或开机启动。素材来源和提示词见 [RYOMA-ASSETS.md](apps/desktop/resources/pet/RYOMA-ASSETS.md)。
 
 ## 技术栈
@@ -114,3 +116,5 @@ npm run dev --workspace @acenote/desktop
 - `spec/SPEC-time-only-today.md`：省略日期默认今天的时刻解析规则
 - `tasks/todo-time-only-today.md`：时间识别与提醒回归验证
 - `tasks/verification-local-setup.md`：干净源码安装、构建与本地运行验证
+- `spec/SPEC-click-complete.md`：圆圈手动完成事项的接口与交互
+- `tasks/todo-click-complete.md`：手动完成、提醒联动与回归验证

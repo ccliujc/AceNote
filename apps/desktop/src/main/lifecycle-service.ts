@@ -13,7 +13,9 @@ import { findCompletionCandidates } from './completion-matcher';
 import type { Intake } from '@acenote/contracts';
 
 export interface LifecycleEvents {
-  onChanged: (reason: 'created' | 'updated' | 'completed' | 'archived' | 'restored') => void;
+  onChanged: (
+    reason: 'created' | 'updated' | 'completed' | 'archived' | 'restored',
+  ) => void;
   onCompleted: (task: LifecycleTask) => void;
 }
 
@@ -54,7 +56,11 @@ export class LifecycleService {
     return this.tasks.get(task.id);
   }
 
-  async selectCandidate(input: { intakeId: string; taskId: string; revision: number }): Promise<LifecycleTask> {
+  async selectCandidate(input: {
+    intakeId: string;
+    taskId: string;
+    revision: number;
+  }): Promise<LifecycleTask> {
     const value = selectCandidateSchema.parse(input);
     this.intakes.get(value.intakeId);
     const task = this.tasks.complete(value.taskId, value.revision);
@@ -72,6 +78,14 @@ export class LifecycleService {
     return task;
   }
 
+  async completeTask(id: string, revision: number): Promise<LifecycleTask> {
+    const task = this.tasks.complete(id, revision);
+    this.syncReminder(task.id);
+    this.events?.onCompleted(task);
+    this.events?.onChanged('completed');
+    return task;
+  }
+
   async restoreTask(id: string, revision: number): Promise<LifecycleTask> {
     const task = this.tasks.restore(id, revision);
     this.syncReminder(task.id);
@@ -79,7 +93,10 @@ export class LifecycleService {
     return task;
   }
 
-  async listTasks(date: string, status: TaskStatusFilter): Promise<LifecycleTask[]> {
+  async listTasks(
+    date: string,
+    status: TaskStatusFilter,
+  ): Promise<LifecycleTask[]> {
     return this.tasks.listByRecordDate(date, status);
   }
 
@@ -97,9 +114,15 @@ export class LifecycleService {
         timeZone: intake.timeZone,
       });
     } catch (error) {
-      const code = error instanceof ParseClientError ? error.code : 'UNKNOWN_ERROR';
+      const code =
+        error instanceof ParseClientError ? error.code : 'UNKNOWN_ERROR';
       this.intakes.markFailed(intake.id, code);
-      return { kind: 'failed', intakeId: intake.id, error: code, message: '未能理解这条输入，原文已保存，可重试。' };
+      return {
+        kind: 'failed',
+        intakeId: intake.id,
+        error: code,
+        message: '未能理解这条输入，原文已保存，可重试。',
+      };
     }
 
     if (intent.intent === 'create') {
@@ -117,12 +140,22 @@ export class LifecycleService {
       this.intakes.markResolved(intake.id, 'create');
       this.syncReminder(task.id);
       this.events?.onChanged('created');
-      return { kind: 'task', intakeId: intake.id, task: this.tasks.get(task.id) };
+      return {
+        kind: 'task',
+        intakeId: intake.id,
+        task: this.tasks.get(task.id),
+      };
     }
 
-    const candidates = findCompletionCandidates(intent.completionTarget, this.tasks.list());
+    const candidates = findCompletionCandidates(
+      intent.completionTarget,
+      this.tasks.list(),
+    );
     if (candidates.length === 1) {
-      const task = this.tasks.complete(candidates[0]!.id, candidates[0]!.revision);
+      const task = this.tasks.complete(
+        candidates[0]!.id,
+        candidates[0]!.revision,
+      );
       this.intakes.markResolved(intake.id, 'complete');
       this.syncReminder(task.id);
       this.events?.onCompleted(task);
@@ -134,7 +167,11 @@ export class LifecycleService {
       return { kind: 'selection_required', intakeId: intake.id, candidates };
     }
     this.intakes.markFailed(intake.id, 'NO_MATCH');
-    return { kind: 'no_match', intakeId: intake.id, message: '没有找到对应的未完成事项，请重新描述或作为新待办保存。' };
+    return {
+      kind: 'no_match',
+      intakeId: intake.id,
+      message: '没有找到对应的未完成事项，请重新描述或作为新待办保存。',
+    };
   }
 
   private syncReminder(taskId: string): void {

@@ -58,6 +58,8 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
   const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const working = busy || completingId !== null;
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [action, setAction] = useState<InputAction | null>(null);
@@ -74,9 +76,9 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
     currentSelection.current = selection;
   });
   useEffect(() => {
-    if (selection && !busy)
+    if (selection && !working)
       candidates.current?.querySelector('button')?.focus();
-  }, [selection, busy]);
+  }, [selection, working]);
 
   const refresh = useCallback(async () => {
     const sequence = ++request.current;
@@ -195,6 +197,25 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
       });
     }, '确认失败，事项可能已变更。请重试或重新描述。');
   }
+  async function complete(task: LifecycleTask) {
+    if (task.status !== 'open' || inputLock.current) return;
+    inputLock.current = true;
+    setCompletingId(task.id);
+    setError('');
+    setNotice('');
+    try {
+      const completed = await api.completeTask(task.id, task.revision);
+      setNotice(`“${completed.title}”已完成，漂亮的一分！`);
+      await refresh();
+      focusInput();
+    } catch {
+      setError('完成失败，事项可能已变更，请重试。');
+      await refresh();
+    } finally {
+      inputLock.current = false;
+      setCompletingId(null);
+    }
+  }
   return (
     <main className="today-card">
       <header className="today-header">
@@ -202,7 +223,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
         <time dateTime={date}>{displayDate(date)}</time>
         <button
           aria-label="收起日程浮窗"
-          disabled={busy}
+          disabled={working}
           onClick={() => api.close()}
         >
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
@@ -213,7 +234,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
       <CaptureComposer
         draft={draft}
         busy={busy}
-        disabled={Boolean(selection)}
+        disabled={Boolean(selection) || completingId !== null}
         onChange={(value) => {
           setDraft(value);
           if (action) setAction(null);
@@ -238,7 +259,10 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
               : '正在加载'}
         </span>
       </div>
-      <div className="today-list" aria-busy={refreshing}>
+      <div
+        className="today-list"
+        aria-busy={refreshing || completingId !== null}
+      >
         {notice && (
           <p className="quick-feedback quick-success" role="status">
             {notice}
@@ -261,7 +285,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
             </p>
             <div>
               <button
-                disabled={busy}
+                disabled={working}
                 onClick={() =>
                   void perform(async () =>
                     handleOutcome(await api.retryInput(action.intakeId)),
@@ -271,7 +295,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
                 重试识别
               </button>
               <button
-                disabled={busy}
+                disabled={working}
                 onClick={() =>
                   void perform(async () => {
                     const task = await api.convertInputToTask(action.intakeId);
@@ -299,7 +323,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
             {selection.candidates.map((candidate) => (
               <button
                 key={candidate.id}
-                disabled={busy}
+                disabled={working}
                 onClick={() => select(candidate)}
               >
                 <strong>{candidate.title}</strong>
@@ -311,7 +335,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
             ))}
             <button
               className="quick-cancel"
-              disabled={busy}
+              disabled={working}
               onClick={() => {
                 setSelection(null);
                 setError('');
@@ -343,22 +367,33 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
             )}
             {data?.tasks.slice(0, 7).map((task) => (
               <article key={task.id} className={`today-task ${task.status}`}>
-                <span
-                  className="today-task-marker"
-                  role="img"
-                  aria-label={labels[task.status]}
+                <button
+                  className="today-complete-button"
+                  aria-label={
+                    task.status === 'open'
+                      ? `完成事项：${task.title}`
+                      : `${labels[task.status]}：${task.title}`
+                  }
+                  aria-busy={completingId === task.id}
+                  title={
+                    task.status === 'open' ? '标记为完成' : labels[task.status]
+                  }
+                  disabled={working || task.status !== 'open'}
+                  onClick={() => void complete(task)}
                 >
-                  {task.status === 'completed' && (
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 16 16"
-                      aria-hidden="true"
-                    >
-                      <path d="m3 8 3 3 7-7" />
-                    </svg>
-                  )}
-                </span>
+                  <span className="today-task-marker" aria-hidden="true">
+                    {task.status === 'completed' && (
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 16 16"
+                        aria-hidden="true"
+                      >
+                        <path d="m3 8 3 3 7-7" />
+                      </svg>
+                    )}
+                  </span>
+                </button>
                 <div className="today-task-content">
                   <strong title={task.title}>{task.title}</strong>
                   <div className="today-task-meta">
@@ -389,7 +424,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
       </div>
       <footer>
         <button
-          disabled={busy}
+          disabled={working}
           onClick={() => {
             api.focusMain();
           }}

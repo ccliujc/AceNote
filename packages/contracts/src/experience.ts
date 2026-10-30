@@ -44,7 +44,11 @@ export interface ExperienceApi {
 export interface QuickInputApi
   extends Pick<
     LifecycleApi,
-    'submitInput' | 'retryInput' | 'convertInputToTask' | 'selectCandidate'
+    | 'submitInput'
+    | 'retryInput'
+    | 'convertInputToTask'
+    | 'selectCandidate'
+    | 'completeTask'
   > {
   listTasks: (date: string) => Promise<LifecycleTask[]>;
   getSummary: (date: string) => Promise<DailyCompletionSummary>;

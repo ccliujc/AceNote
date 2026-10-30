@@ -19,15 +19,19 @@ export const lifecycleTaskSchema = taskSchema.extend({
   archivedAt: z.iso.datetime({ offset: true }).nullable(),
 });
 
-export const createIntentSchema = z.object({
-  intent: z.literal('create'),
-  task: parsedTaskSchema,
-}).strict();
+export const createIntentSchema = z
+  .object({
+    intent: z.literal('create'),
+    task: parsedTaskSchema,
+  })
+  .strict();
 
-export const completeIntentSchema = z.object({
-  intent: z.literal('complete'),
-  completionTarget: z.string().trim().min(1).max(200),
-}).strict();
+export const completeIntentSchema = z
+  .object({
+    intent: z.literal('complete'),
+    completionTarget: z.string().trim().min(1).max(200),
+  })
+  .strict();
 
 export const parseIntentResultSchema = z.discriminatedUnion('intent', [
   createIntentSchema,
@@ -47,7 +51,12 @@ export const completionCandidateSchema = lifecycleTaskSchema.pick({
   revision: true,
 });
 
-export const INTAKE_STATUSES = ['pending', 'awaiting_selection', 'resolved', 'failed'] as const;
+export const INTAKE_STATUSES = [
+  'pending',
+  'awaiting_selection',
+  'resolved',
+  'failed',
+] as const;
 export const intakeStatusSchema = z.enum(INTAKE_STATUSES);
 
 export const intakeSchema = z.object({
@@ -75,14 +84,26 @@ export const lifecycleQuerySchema = z.object({
 });
 
 export const inputOutcomeSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('task'), intakeId: z.uuid(), task: lifecycleTaskSchema }),
-  z.object({ kind: z.literal('completed'), intakeId: z.uuid(), task: lifecycleTaskSchema }),
+  z.object({
+    kind: z.literal('task'),
+    intakeId: z.uuid(),
+    task: lifecycleTaskSchema,
+  }),
+  z.object({
+    kind: z.literal('completed'),
+    intakeId: z.uuid(),
+    task: lifecycleTaskSchema,
+  }),
   z.object({
     kind: z.literal('selection_required'),
     intakeId: z.uuid(),
     candidates: z.array(completionCandidateSchema).min(2),
   }),
-  z.object({ kind: z.literal('no_match'), intakeId: z.uuid(), message: z.string() }),
+  z.object({
+    kind: z.literal('no_match'),
+    intakeId: z.uuid(),
+    message: z.string(),
+  }),
   z.object({
     kind: z.literal('failed'),
     intakeId: z.uuid(),
@@ -112,11 +133,17 @@ export type ParseIntentResponse = z.infer<typeof parseIntentResponseSchema>;
 export type CompletionCandidate = z.infer<typeof completionCandidateSchema>;
 export type IntakeStatus = z.infer<typeof intakeStatusSchema>;
 export type Intake = z.infer<typeof intakeSchema>;
-export type DailyCompletionSummary = z.infer<typeof dailyCompletionSummarySchema>;
+export type DailyCompletionSummary = z.infer<
+  typeof dailyCompletionSummarySchema
+>;
 export type InputOutcome = z.infer<typeof inputOutcomeSchema>;
 
 export interface EditorApi {
-  updateTask: (id: string, patch: import('./capture').TaskPatch, revision: number) => Promise<LifecycleTask>;
+  updateTask: (
+    id: string,
+    patch: import('./capture').TaskPatch,
+    revision: number,
+  ) => Promise<LifecycleTask>;
 }
 
 export interface LifecycleApi {
@@ -125,7 +152,10 @@ export interface LifecycleApi {
   convertInputToTask(intakeId: string): Promise<LifecycleTask>;
   listTasks(date: string, status: TaskStatusFilter): Promise<LifecycleTask[]>;
   getDailySummary(date: string): Promise<DailyCompletionSummary>;
-  selectCandidate(input: z.infer<typeof selectCandidateSchema>): Promise<LifecycleTask>;
+  selectCandidate(
+    input: z.infer<typeof selectCandidateSchema>,
+  ): Promise<LifecycleTask>;
+  completeTask(id: string, revision: number): Promise<LifecycleTask>;
   archiveTask(id: string, revision: number): Promise<LifecycleTask>;
   restoreTask(id: string, revision: number): Promise<LifecycleTask>;
 }

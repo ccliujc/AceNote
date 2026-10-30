@@ -24,11 +24,13 @@ describe('floating input preload', () => {
       taskId: 'task',
       revision: 3,
     });
-    expect(electron.ipcRenderer.invoke.mock.calls.slice(-4)).toEqual([
+    await api.completeTask('task', 3);
+    expect(electron.ipcRenderer.invoke.mock.calls.slice(-5)).toEqual([
       ['lifecycle:submit', '明天下午3点开会'],
       ['lifecycle:retry', 'intake'],
       ['lifecycle:convert', 'intake'],
       ['lifecycle:select', { intakeId: 'intake', taskId: 'task', revision: 3 }],
+      ['lifecycle:complete', 'task', 3],
     ]);
     expect(api).not.toHaveProperty('invoke');
     expect(api).not.toHaveProperty('send');
