@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   CompletionCandidate,
   DailyCompletionSummary,
@@ -10,81 +10,103 @@ import type {
   ReminderApi,
   ReminderView,
   TaskStatusFilter,
-} from '@acenote/contracts';
-import { DateNavigator, todayLocal } from './date-navigator';
-import { CaptureComposer } from './capture-composer';
-import { LifecycleTaskList } from './lifecycle-task-list';
-import { CompletionPicker } from './completion-picker';
-import { CourtView } from './court-view';
-import { ReminderCenter } from './reminder-center';
-import { TaskEditor } from './task-editor';
+  RecoveryApi,
+} from "@acenote/contracts";
+import { DateNavigator, todayLocal } from "./date-navigator";
+import { CaptureComposer } from "./capture-composer";
+import { LifecycleTaskList } from "./lifecycle-task-list";
+import { CompletionPicker } from "./completion-picker";
+import { CourtView } from "./court-view";
+import { ReminderCenter } from "./reminder-center";
+import { TaskEditor } from "./task-editor";
+import { RecoverableInputs } from "./recoverable-inputs";
+import { useInputInvalidation } from "./use-input-invalidation";
 
 interface LifecyclePageProps {
   api: LifecycleApi;
   editorApi: EditorApi;
   reminderApi: ReminderApi;
   experienceApi: ExperienceApi;
+  recoveryApi?: RecoveryApi;
 }
 const filters = [
-  ['all', '全部'],
-  ['open', '未完成'],
-  ['completed', '已完成'],
-  ['archived', '已归档'],
+  ["all", "全部"],
+  ["open", "未完成"],
+  ["completed", "已完成"],
+  ["archived", "已归档"],
 ] as const;
 const errorText = (error: unknown) =>
-  error instanceof Error && error.message.includes('NOT_CONFIGURED')
-    ? '尚未配置 DeepSeek，原文已保存。'
-    : '操作未完成，本地记录不会丢失，请重试。';
+  error instanceof Error && error.message.includes("NOT_CONFIGURED")
+    ? "尚未配置 DeepSeek，原文已保存。"
+    : "操作未完成，本地记录不会丢失，请重试。";
 
 export function LifecyclePage({
   api,
   editorApi,
   reminderApi,
   experienceApi,
+  recoveryApi,
 }: LifecyclePageProps) {
   const [date, setDate] = useState(todayLocal());
-  const [status, setStatus] = useState<TaskStatusFilter>('all');
+  const [status, setStatus] = useState<TaskStatusFilter>("all");
   const [snapshot, setSnapshot] = useState<{
     date: string;
     tasks: LifecycleTask[];
     summary: DailyCompletionSummary;
   } | null>(null);
-  const [queryError, setQueryError] = useState('');
+  const [queryError, setQueryError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [action, setAction] = useState<Extract<
     InputOutcome,
-    { kind: 'no_match' | 'failed' }
+    { kind: "no_match" | "failed" }
   > | null>(null);
   const [selection, setSelection] = useState<{
     intakeId: string;
+    intakeRevision: number;
     candidates: CompletionCandidate[];
   } | null>(null);
-  const [selectionError, setSelectionError] = useState('');
+  const [selectionError, setSelectionError] = useState("");
   const [editing, setEditing] = useState<LifecycleTask | null>(null);
   const [reminders, setReminders] = useState<ReminderView[]>([]);
   const request = useRef(0);
   const inputLock = useRef(false);
   const taskLock = useRef(false);
   const today = todayLocal();
+  useInputInvalidation(recoveryApi, (event) => {
+    const staleAction =
+      action?.intakeId === event.intakeId &&
+      action.intakeRevision < event.revision;
+    const staleSelection =
+      selection?.intakeId === event.intakeId &&
+      selection.intakeRevision < event.revision;
+    if (staleAction) setAction(null);
+    if (staleSelection) setSelection(null);
+    if (
+      (staleAction || staleSelection) &&
+      event.status === "resolved" &&
+      !inputLock.current
+    )
+      setNotice("这条输入已在另一处处理，记录已更新。");
+  });
 
   const refresh = useCallback(async () => {
     const sequence = ++request.current;
     setRefreshing(true);
-    setQueryError('');
+    setQueryError("");
     try {
       const [tasks, summary] = await Promise.all([
-        api.listTasks(date, 'all'),
+        api.listTasks(date, "all"),
         api.getDailySummary(date),
       ]);
       if (sequence === request.current) setSnapshot({ date, tasks, summary });
     } catch {
       if (sequence === request.current)
-        setQueryError('记录加载失败，请重新加载。已有记录仍保存在本地。');
+        setQueryError("记录加载失败，请重新加载。已有记录仍保存在本地。");
     } finally {
       if (sequence === request.current) setRefreshing(false);
     }
@@ -118,24 +140,24 @@ export function LifecyclePage({
   const current = snapshot?.date === date ? snapshot : null;
   const tasks = current?.tasks ?? [];
   const visibleTasks =
-    status === 'all' ? tasks : tasks.filter((task) => task.status === status);
+    status === "all" ? tasks : tasks.filter((task) => task.status === status);
   const loading = !current && !queryError;
 
   async function applyOutcome(outcome: InputOutcome) {
-    if (outcome.kind === 'selection_required') {
-      setSelectionError('');
+    if (outcome.kind === "selection_required") {
+      setSelectionError("");
       setSelection(outcome);
       return;
     }
-    if (outcome.kind === 'failed' || outcome.kind === 'no_match') {
+    if (outcome.kind === "failed" || outcome.kind === "no_match") {
       setAction(outcome);
       return;
     }
-    setDraft('');
+    setDraft("");
     setAction(null);
     setNotice(
-      outcome.kind === 'task'
-        ? '新的一球，已经记下。'
+      outcome.kind === "task"
+        ? "新的一球，已经记下。"
         : `“${outcome.task.title}”已完成，漂亮的一分。`,
     );
     await latestRefresh.current();
@@ -144,8 +166,8 @@ export function LifecyclePage({
     if (inputLock.current) return;
     inputLock.current = true;
     setBusy(true);
-    setError('');
-    setNotice('');
+    setError("");
+    setNotice("");
     try {
       await applyOutcome(await operation());
     } catch (reason) {
@@ -165,12 +187,12 @@ export function LifecyclePage({
     if (!action || inputLock.current) return;
     inputLock.current = true;
     setBusy(true);
-    setError('');
+    setError("");
     try {
-      await api.convertInputToTask(action.intakeId);
-      setDraft('');
+      await api.convertInputToTask(action.intakeId, action.intakeRevision);
+      setDraft("");
       setAction(null);
-      setNotice('已将原文保存为新待办。');
+      setNotice("已将原文保存为新待办。");
       await latestRefresh.current();
     } catch (reason) {
       setError(errorText(reason));
@@ -181,14 +203,14 @@ export function LifecyclePage({
   }
   async function changeStatus(
     task: LifecycleTask,
-    kind: 'archive' | 'restore',
+    kind: "archive" | "restore",
   ) {
     if (taskLock.current) return;
     taskLock.current = true;
     setBusyId(task.id);
-    setError('');
+    setError("");
     try {
-      if (kind === 'archive') await api.archiveTask(task.id, task.revision);
+      if (kind === "archive") await api.archiveTask(task.id, task.revision);
       else await api.restoreTask(task.id, task.revision);
       await latestRefresh.current();
     } catch (reason) {
@@ -221,26 +243,33 @@ export function LifecyclePage({
             <h1>
               每日记录
               <span className="day-label">
-                {date === today ? '今天' : date}
+                {date === today ? "今天" : date}
               </span>
             </h1>
           </div>
           <div className="workspace-date">
             <DateNavigator date={date} onChange={setDate} />
             <div className="completion-total" aria-label="当日完成">
-              <strong>{current ? current.summary.completedCount : '—'}</strong>
+              <strong>{current ? current.summary.completedCount : "—"}</strong>
               <span>当日完成</span>
             </div>
           </div>
         </section>
         {date !== today && (
           <p className="history-hint">
-            {date < today ? '正在查看历史记录' : '正在查看其他日期'}
+            {date < today ? "正在查看历史记录" : "正在查看其他日期"}
             ，新记录仍保存在今天。
             <button className="text-button" onClick={() => setDate(today)}>
               回到今天
             </button>
           </p>
+        )}
+        {recoveryApi && (
+          <RecoverableInputs
+            api={recoveryApi}
+            lifecycle={api}
+            onViewDate={setDate}
+          />
         )}
         <div className="practice-grid">
           <CaptureComposer
@@ -258,15 +287,15 @@ export function LifecyclePage({
           ) : (
             <div className="court-placeholder" role="status">
               {queryError
-                ? '球场暂不可用，请重新加载记录。'
-                : '正在准备这一天的球场…'}
+                ? "球场暂不可用，请重新加载记录。"
+                : "正在准备这一天的球场…"}
             </div>
           )}
         </div>
         {error && (
           <div className="error-banner" role="alert">
             {error}
-            <button aria-label="关闭操作提示" onClick={() => setError('')}>
+            <button aria-label="关闭操作提示" onClick={() => setError("")}>
               ×
             </button>
           </div>
@@ -282,7 +311,7 @@ export function LifecyclePage({
             <button
               className="text-button"
               aria-label="关闭成功提示"
-              onClick={() => setNotice('')}
+              onClick={() => setNotice("")}
             >
               关闭
             </button>
@@ -291,15 +320,17 @@ export function LifecyclePage({
         {action && (
           <div className="action-banner">
             <span>
-              {action.kind === 'failed'
-                ? '这句话还没理解，原文已经保存。'
+              {action.kind === "failed"
+                ? "这句话还没理解，原文已经保存。"
                 : action.message}
             </span>
             <button
               className="text-button"
               disabled={busy}
               onClick={() =>
-                void runInput(() => api.retryInput(action.intakeId))
+                void runInput(() =>
+                  api.retryInput(action.intakeId, action.intakeRevision),
+                )
               }
             >
               重试识别
@@ -320,7 +351,7 @@ export function LifecyclePage({
         >
           <div className="records-toolbar">
             <h2>
-              当日记录 <span>{current ? tasks.length : '—'}</span>
+              当日记录 <span>{current ? tasks.length : "—"}</span>
             </h2>
             <div className="status-tabs" role="group" aria-label="任务状态筛选">
               {filters.map(([value, label]) => (
@@ -328,16 +359,16 @@ export function LifecyclePage({
                   key={value}
                   aria-label={label}
                   aria-pressed={status === value}
-                  className={status === value ? 'active' : ''}
+                  className={status === value ? "active" : ""}
                   onClick={() => setStatus(value)}
                 >
                   {label}
                   <span aria-hidden="true">
                     {current
-                      ? value === 'all'
+                      ? value === "all"
                         ? tasks.length
                         : tasks.filter((task) => task.status === value).length
-                      : '—'}
+                      : "—"}
                   </span>
                 </button>
               ))}
@@ -358,9 +389,9 @@ export function LifecyclePage({
               nowTime={new Date().toTimeString().slice(0, 5)}
               selectedId={editing?.id}
               filter={status}
-              onShowAll={() => setStatus('all')}
-              onArchive={(task) => void changeStatus(task, 'archive')}
-              onRestore={(task) => void changeStatus(task, 'restore')}
+              onShowAll={() => setStatus("all")}
+              onArchive={(task) => void changeStatus(task, "archive")}
+              onRestore={(task) => void changeStatus(task, "restore")}
               onEdit={setEditing}
             />
           )}
@@ -390,21 +421,22 @@ export function LifecyclePage({
               if (inputLock.current) return;
               inputLock.current = true;
               setBusy(true);
-              setSelectionError('');
+              setSelectionError("");
               try {
                 await api.selectCandidate({
                   intakeId: selection.intakeId,
+                  intakeRevision: selection.intakeRevision,
                   taskId: candidate.id,
                   revision: candidate.revision,
                 });
                 setSelection(null);
                 setAction(null);
-                setDraft('');
-                setNotice('已记录完成，漂亮的一分。');
+                setDraft("");
+                setNotice("已记录完成，漂亮的一分。");
                 await latestRefresh.current();
               } catch {
                 setSelectionError(
-                  '未能完成选择，事项可能已变更。请重试或取消后重新描述。',
+                  "未能完成选择，事项可能已变更。请重试或取消后重新描述。",
                 );
               } finally {
                 inputLock.current = false;
@@ -421,7 +453,7 @@ export function LifecyclePage({
             onSave={async (patch, revision) => {
               await editorApi.updateTask(editing.id, patch, revision);
               setEditing(null);
-              setNotice('修改已保存。');
+              setNotice("修改已保存。");
               await latestRefresh.current();
             }}
           />

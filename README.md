@@ -12,6 +12,10 @@ AceNote 采用“桌宠 + 日程浮窗”为主、完整记录窗口按需打开
 
 点击浮窗中未完成事项前的圆圈即可直接完成任务，同步取消提醒、更新完成数并触发人物动效；这个操作不需要 DeepSeek 密钥或网络，也会保留输入框里的草稿。误操作可在完整记录中恢复事项。
 
+识别失败、处理被中断或等待选择的已提交原文，可从浮窗的“待处理输入”数量入口打开完整记录继续处理。恢复列表跨记录日期展示，支持重试识别、明确转为新待办和继续确认完成候选；不受每日任务日期及状态筛选影响。重启只恢复列表，不自动调用模型或执行完成指令。跨天重试仍使用原输入接收时间和时区，恢复操作保留正在输入的其他草稿。
+
+同一输入通过输入版本与任务版本校验，重复处理不会再创建事项或重复完成。旧版本缺少可靠关联的记录会提示先核对接收当天的已有事项，不按相同文字自动合并或删除；旧版转换中断前已经产生的无关联事项无法仅凭文字自动修复。数据库升级采用增量迁移，回退前应保留升级后的新增数据，再使用升级前的完整副本恢复，避免覆盖丢失。
+
 桌宠使用越前龙马形象的持拍、左手击球、庆祝三态透明 PNG，头帽比例已适度缩小，主窗口、日程浮窗和球场统一为澳网蓝主题。浮窗支持输入日程和完成指令，手动收起后保留本次会话草稿。窗口均通过上下文隔离的 preload 通信，不增加托盘或开机启动。当前素材和提示词见 [RYOMA-PROPORTIONS.md](apps/desktop/resources/pet/RYOMA-PROPORTIONS.md)，初版来源见 [RYOMA-ASSETS.md](apps/desktop/resources/pet/RYOMA-ASSETS.md)。
 
 ## 技术栈
@@ -23,7 +27,7 @@ AceNote 采用“桌宠 + 日程浮窗”为主、完整记录窗口按需打开
 
 ## 环境要求
 
-- 推荐 Node.js 22 LTS（仓库提供 `.nvmrc`）；也支持 Node.js 24
+- 推荐 Node.js 22 LTS，最低 22.13（含 OpenSpec 开发工具及其依赖要求，仓库提供 `.nvmrc`）；也支持 Node.js 24
 - npm 10+
 - macOS 或 Windows 桌面环境；Windows 原生窗口行为尚未完整实测
 - 完整的自然语言新增、完成识别及自动提取提醒时间需要自己的 DeepSeek API 密钥
@@ -96,8 +100,27 @@ npm run dev --workspace @acenote/desktop
 - **没有出现大窗口**：这是默认设计，先找桌面人物并单击；退出请用人物右键菜单或 Cmd+Q。
 - **识别不可用**：检查根目录 `.env` 中的密钥、网络与本地服务日志。默认服务只绑定 `127.0.0.1:3777`；修改端口时，还需在启动前为桌面进程设置 `ACENOTE_PARSE_URL` 指向相同地址。
 
+## OpenSpec 工作流
+
+项目已将 OpenSpec 固定为根工作区开发依赖，运行 `npm ci` 时一并安装。项目内通过以下命令使用，无需全局安装：
+
+```bash
+npm run openspec -- --version
+npm run openspec -- list
+npm run openspec -- list --specs
+npm run openspec -- validate --all --strict --no-interactive
+```
+
+已为 Codex 初始化 6 个工作流技能，位于 `.agents/skills/`：`openspec-explore`、`openspec-propose`、`openspec-update-change`、`openspec-apply-change`、`openspec-sync-specs` 和 `openspec-archive-change`。可在聊天中引用 `$openspec-propose` 并描述要规划的变更；新技能未显示时，重新打开项目或会话后再选择。调用方式及项目初始化说明见 [OpenSpec 官方文档](https://openspec.dev/docs/setup)。
+
+项目配置在 [openspec/config.yaml](openspec/config.yaml)，默认使用简体中文编写文档。已根据当前实现建立 `capture`、`task-lifecycle`、`reminders`、`desktop-experience` 四项基线规格，见 [已有项目基线说明](openspec/README.md)。正式规格放在 `openspec/specs/`，后续变更放在 `openspec/changes/`；原有 `spec/`、`tasks/` 与需求草案继续保留，已知缺口单独记录，不会被视为已完成功能。
+
+重新拉取项目后，如需重建 Codex 技能，可运行 `npm run openspec -- init --tools codex --language 简体中文 --profile core --no-animation`；升级开发依赖中的 OpenSpec 版本后，运行 `npm run openspec -- update` 刷新生成的技能文件。
+
 ## 规格与实施
 
+- [F01 输入恢复验收](tasks/verification-f01-input-recovery.md)：已完成；正式规格已同步，变更已归档
+- [下一阶段需求说明书](spec/PRD-next-release.md)：未完成项、可靠性补齐、安装试用、账号与云端能力的分期及验收标准（待实施草案）
 - `spec/CAPABILITY-MAP.md`：能力边界和构建顺序
 - `spec/SPEC-capture.md`：当前模块规格
 - `tasks/plan.md`：技术计划

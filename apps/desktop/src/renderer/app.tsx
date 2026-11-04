@@ -1,5 +1,11 @@
-import type { EditorApi, ExperienceApi, LifecycleApi, ReminderApi } from '@acenote/contracts';
-import { LifecyclePage } from './lifecycle-page';
+import type {
+  EditorApi,
+  ExperienceApi,
+  LifecycleApi,
+  ReminderApi,
+  RecoveryApi,
+} from "@acenote/contracts";
+import { LifecyclePage } from "./lifecycle-page";
 
 declare global {
   interface Window {
@@ -7,9 +13,18 @@ declare global {
     lifecycle: LifecycleApi;
     reminder: ReminderApi;
     experience: ExperienceApi;
+    recovery: RecoveryApi;
   }
 }
 
 export function App() {
-  return <LifecyclePage api={window.lifecycle} editorApi={window.editor} reminderApi={window.reminder} experienceApi={window.experience} />;
+  return (
+    <LifecyclePage
+      api={window.lifecycle}
+      editorApi={window.editor}
+      reminderApi={window.reminder}
+      experienceApi={window.experience}
+      recoveryApi={window.recovery}
+    />
+  );
 }

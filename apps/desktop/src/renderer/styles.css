@@ -1,4 +1,4 @@
-@import './tokens.css';
+@import "./tokens.css";
 
 :root {
   font-family: var(--font-ui);
@@ -140,7 +140,7 @@ h1 {
 }
 h1 em {
   color: var(--brand);
-  font-family: Georgia, 'Noto Serif SC', serif;
+  font-family: Georgia, "Noto Serif SC", serif;
   font-weight: 400;
 }
 .hero-copy {
@@ -400,7 +400,7 @@ h2 {
   opacity: 0.65;
 }
 .tennis-ball::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 5px 12px;
   border: solid var(--control-border);
@@ -718,7 +718,7 @@ h2 {
   background: var(--court-lines);
 }
 .court-net::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 12%;
   right: 12%;
@@ -1039,7 +1039,7 @@ button {
 }
 .brand-ball::before,
 .brand-ball::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 20px;
   height: 28px;
@@ -1555,7 +1555,7 @@ button {
     padding: 3px 14px;
     border-radius: 8px;
   }
-  .court-panel:has(.court-toggle[aria-expanded='true']) {
+  .court-panel:has(.court-toggle[aria-expanded="true"]) {
     padding-bottom: 12px;
   }
   .court-field {
@@ -1621,4 +1621,71 @@ button {
 
 .capture-composer .primary-button:hover:not(:disabled) {
   background: var(--accent-hover);
+}
+
+.recovery-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+.recovery-heading,
+.recovery-item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.recovery-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.recovery-heading h2 span {
+  color: var(--brand);
+  padding-left: 6px;
+}
+.recovery-heading p,
+.recovery-reason,
+.recovery-empty {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 5px 0;
+}
+.recovery-list {
+  max-height: 290px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.recovery-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.recovery-item-heading {
+  font-size: 12px;
+  color: var(--brand-strong);
+  flex-wrap: wrap;
+}
+.recovery-item-heading time {
+  color: var(--muted);
+}
+.recovery-raw {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0;
+}
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+}
+.recovery-notice {
+  color: var(--success);
+  font-size: 13px;
 }

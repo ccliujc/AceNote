@@ -1,33 +1,42 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import Database from 'better-sqlite3';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
-import { rmSync } from 'node:fs';
-import { createDatabase } from '../src/main/database';
+import { afterEach, describe, expect, it } from "vitest";
+import Database from "better-sqlite3";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
+import { rmSync } from "node:fs";
+import { createDatabase } from "../src/main/database";
 
 const paths: string[] = [];
 afterEach(() => {
   for (const path of paths.splice(0)) {
-    for (const suffix of ['', '-wal', '-shm']) rmSync(path + suffix, { force: true });
+    for (const suffix of ["", "-wal", "-shm"])
+      rmSync(path + suffix, { force: true });
   }
 });
 
-describe('database migrations', () => {
-  it('runs both migrations idempotently and persists data after reopening', () => {
+describe("database migrations", () => {
+  it("runs all migrations idempotently and persists data after reopening", () => {
     const path = join(tmpdir(), `${randomUUID()}.sqlite`);
     paths.push(path);
     const first = createDatabase(path);
-    expect(first.prepare('SELECT COUNT(*) AS count FROM schema_migrations').get()).toEqual({ count: 3 });
+    expect(
+      first.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get(),
+    ).toEqual({ count: 4 });
     first.close();
 
     const second = createDatabase(path);
-    expect(second.prepare('SELECT COUNT(*) AS count FROM schema_migrations').get()).toEqual({ count: 3 });
-    expect(second.prepare("SELECT name FROM sqlite_master WHERE name = 'intake_events'").get()).toEqual({ name: 'intake_events' });
+    expect(
+      second.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get(),
+    ).toEqual({ count: 4 });
+    expect(
+      second
+        .prepare("SELECT name FROM sqlite_master WHERE name = 'intake_events'")
+        .get(),
+    ).toEqual({ name: "intake_events" });
     second.close();
   });
 
-  it('upgrades a version 1 capture database without losing existing fields', () => {
+  it("upgrades a version 1 capture database without losing existing fields", () => {
     const path = join(tmpdir(), `${randomUUID()}.sqlite`);
     paths.push(path);
     const legacy = new Database(path);
@@ -49,10 +58,22 @@ describe('database migrations', () => {
     legacy.close();
 
     const upgraded = createDatabase(path);
-    expect(upgraded.prepare('SELECT raw_text, title, record_date, revision, status FROM tasks').get()).toEqual({
-      raw_text: '旧任务原文', title: '旧任务', record_date: '2026-10-01', revision: 1, status: 'open',
+    expect(
+      upgraded
+        .prepare(
+          "SELECT raw_text, title, record_date, revision, status FROM tasks",
+        )
+        .get(),
+    ).toEqual({
+      raw_text: "旧任务原文",
+      title: "旧任务",
+      record_date: "2026-10-01",
+      revision: 1,
+      status: "open",
     });
-    expect(upgraded.prepare('SELECT COUNT(*) AS count FROM schema_migrations').get()).toEqual({ count: 3 });
+    expect(
+      upgraded.prepare("SELECT COUNT(*) AS count FROM schema_migrations").get(),
+    ).toEqual({ count: 4 });
     upgraded.close();
   });
 });

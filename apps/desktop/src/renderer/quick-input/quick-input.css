@@ -1,4 +1,4 @@
-@import '../tokens.css';
+@import "../tokens.css";
 
 html,
 body,
@@ -227,10 +227,10 @@ body,
   cursor: default;
   opacity: 1;
 }
-.today-complete-button[aria-busy='true'] {
+.today-complete-button[aria-busy="true"] {
   cursor: progress;
 }
-.today-complete-button[aria-busy='true'] .today-task-marker {
+.today-complete-button[aria-busy="true"] .today-task-marker {
   border-color: var(--brand);
   border-right-color: transparent;
   animation: completing-task 0.7s linear infinite;
@@ -252,7 +252,7 @@ body,
   stroke-linejoin: round;
 }
 .archived .today-task-marker::after {
-  content: '';
+  content: "";
   width: 10px;
   height: 1.5px;
   background: #7c8ca2;
@@ -436,4 +436,23 @@ body,
   .today-card .capture-composer-compact {
     margin-inline: 12px;
   }
+}
+
+.quick-recovery {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  color: var(--muted);
+  font-size: 11px;
+  border-top: 1px solid var(--border);
+}
+.quick-recovery button {
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-strong);
+  font-size: 12px;
 }

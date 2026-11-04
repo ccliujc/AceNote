@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { QuickInputApi } from '@acenote/contracts';
+import { describe, expect, it, vi } from "vitest";
+import type { QuickInputApi } from "@acenote/contracts";
 const electron = vi.hoisted(() => ({
   contextBridge: { exposeInMainWorld: vi.fn() },
   ipcRenderer: {
@@ -9,33 +9,37 @@ const electron = vi.hoisted(() => ({
     removeListener: vi.fn(),
   },
 }));
-vi.mock('electron', () => electron);
-import '../src/preload/quick-input';
+vi.mock("electron", () => electron);
+import "../src/preload/quick-input";
 
 const api = electron.contextBridge.exposeInMainWorld.mock
   .calls[0]![1] as QuickInputApi;
-describe('floating input preload', () => {
-  it('uses the existing validated lifecycle operations without exposing generic IPC', async () => {
-    await api.submitInput('明天下午3点开会');
-    await api.retryInput('intake');
-    await api.convertInputToTask('intake');
+describe("floating input preload", () => {
+  it("uses the existing validated lifecycle operations without exposing generic IPC", async () => {
+    await api.submitInput("明天下午3点开会");
+    await api.retryInput("intake", 0);
+    await api.convertInputToTask("intake", 0);
     await api.selectCandidate({
-      intakeId: 'intake',
-      taskId: 'task',
+      intakeId: "intake",
+      intakeRevision: 0,
+      taskId: "task",
       revision: 3,
     });
-    await api.completeTask('task', 3);
+    await api.completeTask("task", 3);
     expect(electron.ipcRenderer.invoke.mock.calls.slice(-5)).toEqual([
-      ['lifecycle:submit', '明天下午3点开会'],
-      ['lifecycle:retry', 'intake'],
-      ['lifecycle:convert', 'intake'],
-      ['lifecycle:select', { intakeId: 'intake', taskId: 'task', revision: 3 }],
-      ['lifecycle:complete', 'task', 3],
+      ["lifecycle:submit", "明天下午3点开会"],
+      ["lifecycle:retry", "intake", 0],
+      ["lifecycle:convert", "intake", 0],
+      [
+        "lifecycle:select",
+        { intakeId: "intake", intakeRevision: 0, taskId: "task", revision: 3 },
+      ],
+      ["lifecycle:complete", "task", 3],
     ]);
-    expect(api).not.toHaveProperty('invoke');
-    expect(api).not.toHaveProperty('send');
+    expect(api).not.toHaveProperty("invoke");
+    expect(api).not.toHaveProperty("send");
   });
-  it('unsubscribes the same data-change handler', () => {
+  it("unsubscribes the same data-change handler", () => {
     const listener = vi.fn();
     const off = api.onDataChanged(listener);
     const handler = electron.ipcRenderer.on.mock.calls.at(-1)![1];
@@ -43,7 +47,7 @@ describe('floating input preload', () => {
     expect(listener).toHaveBeenCalledOnce();
     off();
     expect(electron.ipcRenderer.removeListener).toHaveBeenCalledWith(
-      'data:changed',
+      "data:changed",
       handler,
     );
   });

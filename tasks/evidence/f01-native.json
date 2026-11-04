@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-01",
+  "method": "实际 Electron 33.2.1 生产构建；隔离 userData；原生 BrowserWindow 生命周期；webContents.sendInputEvent / insertText；本机固定响应 HTTP 模型；capturePage 内容截图。不是系统鼠标穿透或多屏测试。",
+  "runs": {
+    "first": {
+      "stage": "first",
+      "platform": "darwin",
+      "electron": "33.2.1",
+      "sqliteABI": "130",
+      "userData": "/tmp/acenote-f01-native-final/user-data",
+      "passed": true,
+      "startupWindows": 1,
+      "parserRequests": [],
+      "initialTaskCount": 0,
+      "finalTaskCount": 1,
+      "draftsPreserved": true,
+      "mainCloseIndependent": true,
+      "floatCloseIndependent": true,
+      "screenshots": [
+        "first-float-after.png",
+        "first-float-before.png",
+        "first-main-after.png",
+        "first-main-before.png"
+      ],
+      "errors": []
+    },
+    "second": {
+      "stage": "second",
+      "platform": "darwin",
+      "electron": "33.2.1",
+      "sqliteABI": "130",
+      "userData": "/tmp/acenote-f01-native-final/user-data",
+      "passed": true,
+      "startupWindows": 1,
+      "parserRequests": [
+        {
+          "requestId": "22222222-2222-4222-8222-222222222222",
+          "rawText": "12点提醒我验收午餐",
+          "localDateTime": "2026-10-30T01:00:00.000Z",
+          "timeZone": "Asia/Shanghai"
+        }
+      ],
+      "initialTaskCount": 1,
+      "finalTaskCount": 2,
+      "draftsPreserved": true,
+      "mainCloseIndependent": true,
+      "floatCloseIndependent": true,
+      "screenshots": [
+        "second-float-after.png",
+        "second-float-before.png",
+        "second-main-after.png",
+        "second-main-before.png"
+      ],
+      "errors": []
+    }
+  }
+}

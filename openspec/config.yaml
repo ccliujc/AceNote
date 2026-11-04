@@ -1,0 +1,22 @@
+schema: spec-driven
+
+context: |
+  Language: 简体中文
+  All artifacts must be written in 简体中文.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  AceNote is a local-first Electron + React + TypeScript app with SQLite and a local NestJS parsing service.
+  OpenSpec is installed in this repository. Invoke its CLI with `npm run openspec -- <command>`, including when a workflow shows a bare `openspec` command.
+  Read README.md and the relevant existing spec/ documents before planning changes; tasks/ contains historical delivery and verification records.
+  spec/PRD-next-release.md is the remaining-requirements draft, not a record of shipped features. Do not start implementing the entire roadmap automatically.
+  Preserve the floating-first window lifecycle, AO blue theme, local-first persistence, and existing date/time semantics unless the requested change revises them.
+  Reminders are in-app only while the app runs; missed reminders are not replayed after exit. Account and hosted parsing features remain future work.
+
+rules:
+  proposal:
+    - Distinguish current behavior, the requested change, and work outside this change; reference relevant PRD requirement IDs when applicable.
+  specs:
+    - Describe observable behavior with testable WHEN/THEN scenarios, including failures and recovery paths relevant to the change.
+  design:
+    - Address existing data compatibility and Electron window or IPC boundaries when affected; do not assume a database migration is already approved by a draft requirement.
+  tasks:
+    - Keep tasks scoped to the requested change and include meaningful verification; distinguish native platform checks from mocks and browser previews.

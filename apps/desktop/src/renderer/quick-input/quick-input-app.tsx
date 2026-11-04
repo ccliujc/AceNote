@@ -4,18 +4,20 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-} from 'react';
+} from "react";
 import type {
   CompletionCandidate,
   DailyCompletionSummary,
   InputOutcome,
   LifecycleTask,
   QuickInputApi,
-} from '@acenote/contracts';
-import { todayLocal } from '../date-navigator';
-import { CaptureComposer } from '../capture-composer';
-import { isTaskTimePast } from '../task-time';
-import './quick-input.css';
+} from "@acenote/contracts";
+import { todayLocal } from "../date-navigator";
+import { CaptureComposer } from "../capture-composer";
+import { isTaskTimePast } from "../task-time";
+import { RecoverySummary } from "../recovery-summary";
+import { useInputInvalidation } from "../use-input-invalidation";
+import "./quick-input.css";
 
 declare global {
   interface Window {
@@ -23,28 +25,32 @@ declare global {
   }
 }
 const labels = {
-  open: '未完成',
-  completed: '已完成',
-  archived: '已归档',
+  open: "未完成",
+  completed: "已完成",
+  archived: "已归档",
 } as const;
-type InputAction = Extract<InputOutcome, { kind: 'failed' | 'no_match' }>;
-type Selection = { intakeId: string; candidates: CompletionCandidate[] };
-const focusInput = () => document.getElementById('capture-draft')?.focus();
+type InputAction = Extract<InputOutcome, { kind: "failed" | "no_match" }>;
+type Selection = {
+  intakeId: string;
+  intakeRevision: number;
+  candidates: CompletionCandidate[];
+};
+const focusInput = () => document.getElementById("capture-draft")?.focus();
 const displayDate = (date: string) =>
-  new Intl.DateTimeFormat('zh-CN', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
+  new Intl.DateTimeFormat("zh-CN", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
   }).format(new Date(`${date}T12:00:00`));
 const dueLabel = (task: LifecycleTask, today: string) => {
-  if (!task.dueDate) return '';
+  if (!task.dueDate) return "";
   const day =
     task.dueDate === today
       ? task.dueTime
-        ? ''
-        : '今天'
+        ? ""
+        : "今天"
       : `${Number(task.dueDate.slice(5, 7))}月${Number(task.dueDate.slice(8, 10))}日`;
-  return [day, task.dueTime].filter(Boolean).join(' ');
+  return [day, task.dueTime].filter(Boolean).join(" ");
 };
 
 export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
@@ -54,20 +60,36 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
     tasks: LifecycleTask[];
     summary: DailyCompletionSummary;
   } | null>(null);
-  const [queryError, setQueryError] = useState('');
+  const [queryError, setQueryError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const working = busy || completingId !== null;
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [action, setAction] = useState<InputAction | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const inputLock = useRef(false);
   const request = useRef(0);
   const currentSelection = useRef(selection);
   const candidates = useRef<HTMLElement>(null);
+  useInputInvalidation(api, (event) => {
+    const staleAction =
+      action?.intakeId === event.intakeId &&
+      action.intakeRevision < event.revision;
+    const staleSelection =
+      selection?.intakeId === event.intakeId &&
+      selection.intakeRevision < event.revision;
+    if (staleAction) setAction(null);
+    if (staleSelection) setSelection(null);
+    if (
+      (staleAction || staleSelection) &&
+      event.status === "resolved" &&
+      !inputLock.current
+    )
+      setNotice("这条输入已在另一处处理，记录已更新。");
+  });
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
@@ -77,13 +99,13 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
   });
   useEffect(() => {
     if (selection && !working)
-      candidates.current?.querySelector('button')?.focus();
+      candidates.current?.querySelector("button")?.focus();
   }, [selection, working]);
 
   const refresh = useCallback(async () => {
     const sequence = ++request.current;
     setRefreshing(true);
-    setQueryError('');
+    setQueryError("");
     try {
       const [tasks, summary] = await Promise.all([
         api.listTasks(date),
@@ -92,7 +114,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
       if (sequence === request.current) setData({ tasks, summary });
     } catch {
       if (sequence === request.current)
-        setQueryError('今日待办加载失败，请重试。');
+        setQueryError("今日待办加载失败，请重试。");
     } finally {
       if (sequence === request.current) setRefreshing(false);
     }
@@ -102,7 +124,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
     const off = api.onDataChanged(() => void refresh());
     const closeOnEscape = (event: KeyboardEvent) => {
       if (
-        event.key !== 'Escape' ||
+        event.key !== "Escape" ||
         event.isComposing ||
         event.keyCode === 229 ||
         inputLock.current
@@ -111,47 +133,47 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
       event.preventDefault();
       if (currentSelection.current) {
         setSelection(null);
-        setError('');
+        setError("");
         focusInput();
       } else api.close();
     };
     const focusCurrent = () => {
       if (currentSelection.current)
-        candidates.current?.querySelector('button')?.focus();
+        candidates.current?.querySelector("button")?.focus();
       else focusInput();
     };
-    window.addEventListener('keydown', closeOnEscape);
-    window.addEventListener('focus', focusCurrent);
+    window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("focus", focusCurrent);
     return () => {
       request.current += 1;
       off();
-      window.removeEventListener('keydown', closeOnEscape);
-      window.removeEventListener('focus', focusCurrent);
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("focus", focusCurrent);
     };
   }, [api, refresh]);
 
   async function handleOutcome(outcome: InputOutcome) {
-    if (outcome.kind === 'selection_required') {
+    if (outcome.kind === "selection_required") {
       setAction(null);
       setSelection(outcome);
       return;
     }
-    if (outcome.kind === 'failed' || outcome.kind === 'no_match') {
+    if (outcome.kind === "failed" || outcome.kind === "no_match") {
       setAction(outcome);
       return;
     }
-    setDraft('');
+    setDraft("");
     setAction(null);
     setSelection(null);
     const task = outcome.task;
     const time =
       task.dueDate && task.dueTime
-        ? `${task.dueDate === todayLocal() ? '今天' : task.dueDate} ${task.dueTime}`
-        : '';
+        ? `${task.dueDate === todayLocal() ? "今天" : task.dueDate} ${task.dueTime}`
+        : "";
     setNotice(
-      outcome.kind === 'task'
+      outcome.kind === "task"
         ? time
-          ? `已记下“${task.title}”，时间为${time}${isTaskTimePast(task) ? '（已过时间，不会补发提醒）' : ''}。`
+          ? `已记下“${task.title}”，时间为${time}${isTaskTimePast(task) ? "（已过时间，不会补发提醒）" : ""}。`
           : `已记下“${task.title}”。`
         : `“${task.title}”已完成，漂亮的一分！`,
     );
@@ -160,13 +182,13 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
   }
   async function perform(
     operation: () => Promise<void>,
-    failure = '操作未完成，输入已保留，请重试。',
+    failure = "操作未完成，输入已保留，请重试。",
   ) {
     if (inputLock.current) return;
     inputLock.current = true;
     setBusy(true);
-    setError('');
-    setNotice('');
+    setError("");
+    setNotice("");
     try {
       await operation();
     } catch {
@@ -187,29 +209,31 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
     void perform(async () => {
       const task = await api.selectCandidate({
         intakeId: selection.intakeId,
+        intakeRevision: selection.intakeRevision,
         taskId: candidate.id,
         revision: candidate.revision,
       });
       await handleOutcome({
-        kind: 'completed',
+        kind: "completed",
         intakeId: selection.intakeId,
+        intakeRevision: selection.intakeRevision,
         task,
       });
-    }, '确认失败，事项可能已变更。请重试或重新描述。');
+    }, "确认失败，事项可能已变更。请重试或重新描述。");
   }
   async function complete(task: LifecycleTask) {
-    if (task.status !== 'open' || inputLock.current) return;
+    if (task.status !== "open" || inputLock.current) return;
     inputLock.current = true;
     setCompletingId(task.id);
-    setError('');
-    setNotice('');
+    setError("");
+    setNotice("");
     try {
       const completed = await api.completeTask(task.id, task.revision);
       setNotice(`“${completed.title}”已完成，漂亮的一分！`);
       await refresh();
       focusInput();
     } catch {
-      setError('完成失败，事项可能已变更，请重试。');
+      setError("完成失败，事项可能已变更，请重试。");
       await refresh();
     } finally {
       inputLock.current = false;
@@ -238,7 +262,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
         onChange={(value) => {
           setDraft(value);
           if (action) setAction(null);
-          setError('');
+          setError("");
         }}
         onSubmit={submit}
         variant="compact"
@@ -249,14 +273,14 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
       />
       <div className="today-summary">
         <h2>
-          今天 <span>{data?.tasks.length ?? '—'}</span>
+          今天 <span>{data?.tasks.length ?? "—"}</span>
         </h2>
         <span>
           {data
             ? `已完成 ${data.summary.completedCount}`
             : queryError
-              ? '暂不可用'
-              : '正在加载'}
+              ? "暂不可用"
+              : "正在加载"}
         </span>
       </div>
       <div
@@ -279,8 +303,8 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
             aria-label="输入处理结果"
           >
             <p>
-              {action.kind === 'failed'
-                ? '这句话暂时未能识别，原文已保存。'
+              {action.kind === "failed"
+                ? "这句话暂时未能识别，原文已保存。"
                 : action.message}
             </p>
             <div>
@@ -288,7 +312,12 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
                 disabled={working}
                 onClick={() =>
                   void perform(async () =>
-                    handleOutcome(await api.retryInput(action.intakeId)),
+                    handleOutcome(
+                      await api.retryInput(
+                        action.intakeId,
+                        action.intakeRevision,
+                      ),
+                    ),
                   )
                 }
               >
@@ -298,10 +327,14 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
                 disabled={working}
                 onClick={() =>
                   void perform(async () => {
-                    const task = await api.convertInputToTask(action.intakeId);
+                    const task = await api.convertInputToTask(
+                      action.intakeId,
+                      action.intakeRevision,
+                    );
                     await handleOutcome({
-                      kind: 'task',
+                      kind: "task",
                       intakeId: action.intakeId,
+                      intakeRevision: action.intakeRevision,
                       task,
                     });
                   })
@@ -329,7 +362,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
                 <strong>{candidate.title}</strong>
                 <span>
                   {candidate.recordDate}
-                  {candidate.contact ? ` · ${candidate.contact}` : ''}
+                  {candidate.contact ? ` · ${candidate.contact}` : ""}
                 </span>
               </button>
             ))}
@@ -338,7 +371,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
               disabled={working}
               onClick={() => {
                 setSelection(null);
-                setError('');
+                setError("");
                 focusInput();
               }}
             >
@@ -370,19 +403,19 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
                 <button
                   className="today-complete-button"
                   aria-label={
-                    task.status === 'open'
+                    task.status === "open"
                       ? `完成事项：${task.title}`
                       : `${labels[task.status]}：${task.title}`
                   }
                   aria-busy={completingId === task.id}
                   title={
-                    task.status === 'open' ? '标记为完成' : labels[task.status]
+                    task.status === "open" ? "标记为完成" : labels[task.status]
                   }
-                  disabled={working || task.status !== 'open'}
+                  disabled={working || task.status !== "open"}
                   onClick={() => void complete(task)}
                 >
                   <span className="today-task-marker" aria-hidden="true">
-                    {task.status === 'completed' && (
+                    {task.status === "completed" && (
                       <svg
                         width="12"
                         height="12"
@@ -400,12 +433,12 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
                     {task.dueDate && (
                       <time
                         className="today-time-chip"
-                        dateTime={`${task.dueDate}${task.dueTime ? `T${task.dueTime}` : ''}`}
+                        dateTime={`${task.dueDate}${task.dueTime ? `T${task.dueTime}` : ""}`}
                       >
                         {dueLabel(task, date)}
                       </time>
                     )}
-                    {task.status !== 'open' && (
+                    {task.status !== "open" && (
                       <span>{labels[task.status]}</span>
                     )}
                     {isTaskTimePast(task, now) && (
@@ -422,6 +455,11 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
           </>
         )}
       </div>
+      <RecoverySummary
+        api={api}
+        onOpen={() => api.focusMain()}
+        disabled={working}
+      />
       <footer>
         <button
           disabled={working}
@@ -432,7 +470,7 @@ export function TodayPanelApp({ api = window.today }: { api?: QuickInputApi }) {
           打开完整记录 <span aria-hidden="true">↗</span>
         </button>
         <span className="quick-draft-note">
-          {draft.trim() ? '收起保留草稿' : 'Esc 收起'}
+          {draft.trim() ? "收起保留草稿" : "Esc 收起"}
         </span>
       </footer>
     </main>

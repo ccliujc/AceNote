@@ -1,23 +1,31 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const PARSE_STATUSES = ['pending', 'processing', 'succeeded', 'failed'] as const;
+export const PARSE_STATUSES = [
+  "pending",
+  "processing",
+  "succeeded",
+  "failed",
+] as const;
 export const parseStatusSchema = z.enum(PARSE_STATUSES);
 export const dueDateSchema = z.iso.date();
 export const dueTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export const errorCodeSchema = z.enum([
-  'INVALID_INPUT',
-  'NOT_FOUND',
-  'STORAGE_ERROR',
-  'NETWORK_ERROR',
-  'PARSE_TIMEOUT',
-  'PARSE_UNAVAILABLE',
-  'PARSE_INVALID_RESPONSE',
-  'PARSE_NOT_CONFIGURED',
-  'CONCURRENT_EDIT',
-  'INVALID_TRANSITION',
-  'NO_MATCH',
-  'MULTIPLE_MATCHES',
-  'UNKNOWN_ERROR',
+  "INVALID_INPUT",
+  "NOT_FOUND",
+  "STORAGE_ERROR",
+  "NETWORK_ERROR",
+  "PARSE_TIMEOUT",
+  "PARSE_UNAVAILABLE",
+  "PARSE_INVALID_RESPONSE",
+  "PARSE_NOT_CONFIGURED",
+  "CONCURRENT_EDIT",
+  "INVALID_TRANSITION",
+  "NO_MATCH",
+  "MULTIPLE_MATCHES",
+  "UNKNOWN_ERROR",
+  "INPUT_BUSY",
+  "INPUT_ALREADY_RESOLVED",
+  "INPUT_INTERRUPTED",
 ]);
 
 export const rawTextSchema = z.string().trim().min(1).max(2000);
@@ -31,7 +39,7 @@ export const parsedTaskSchema = z
   .strict()
   .superRefine((value, context) => {
     if (value.dueTime && !value.dueDate) {
-      context.addIssue({ code: 'custom', message: 'dueTime requires dueDate' });
+      context.addIssue({ code: "custom", message: "dueTime requires dueDate" });
     }
   });
 
@@ -74,7 +82,7 @@ export const taskPatchSchema = z
   })
   .strict();
 
-export const reparseModeSchema = z.enum(['preserve', 'replace']);
+export const reparseModeSchema = z.enum(["preserve", "replace"]);
 
 export type ParseStatus = z.infer<typeof parseStatusSchema>;
 export type ErrorCode = z.infer<typeof errorCodeSchema>;

@@ -12,7 +12,7 @@
     "multer": "2.5.0"
   },
   "engines": {
-    "node": ">=22 <25"
+    "node": ">=22.13 <25"
   },
   "scripts": {
     "dev": "concurrently -k -n server,desktop \"npm run dev --workspace @acenote/server\" \"npm run dev --workspace @acenote/desktop\"",
@@ -21,10 +21,12 @@
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "openspec": "openspec"
   },
   "devDependencies": {
     "@eslint/js": "9.20.0",
+    "@fission-ai/openspec": "1.16.0",
     "concurrently": "9.1.2",
     "eslint": "9.20.1",
     "eslint-plugin-react-hooks": "5.1.0",

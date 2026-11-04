@@ -1,10 +1,11 @@
-import type { CompletionCandidate } from '@acenote/contracts';
-import { DialogShell } from './dialog-shell';
+import type { CompletionCandidate } from "@acenote/contracts";
+import { DialogShell } from "./dialog-shell";
 
 interface CompletionPickerProps {
   candidates: CompletionCandidate[];
   busy: boolean;
   error?: string;
+  description?: string;
   onSelect: (candidate: CompletionCandidate) => void;
   onCancel: () => void;
 }
@@ -13,6 +14,7 @@ export function CompletionPicker({
   candidates,
   busy,
   error,
+  description,
   onSelect,
   onCancel,
 }: CompletionPickerProps) {
@@ -21,7 +23,7 @@ export function CompletionPicker({
       <p className="eyebrow">WHICH ONE?</p>
       <h2 id="pick-title">是哪一项完成了？</h2>
       <p className="dialog-copy">
-        找到多个匹配事项。你选择前，我不会改动任何状态。
+        {description ?? "找到多个匹配事项。你选择前，我不会改动任何状态。"}
       </p>
       <div className="candidate-list">
         {candidates.map((candidate) => (
@@ -33,7 +35,7 @@ export function CompletionPicker({
             <strong>{candidate.title}</strong>
             <span>
               {candidate.recordDate}
-              {candidate.contact ? ` · ${candidate.contact}` : ''}
+              {candidate.contact ? ` · ${candidate.contact}` : ""}
             </span>
           </button>
         ))}
