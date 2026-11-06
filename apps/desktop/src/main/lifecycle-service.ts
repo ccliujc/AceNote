@@ -23,6 +23,7 @@ export interface LifecycleEvents {
     reason: "created" | "updated" | "completed" | "archived" | "restored",
   ) => void;
   onCompleted: (task: LifecycleTask) => void;
+  onTaskChanged?: (task: LifecycleTask) => void;
   onInputChanged?: (event: IntakeChangedEvent) => void;
 }
 interface Operation {
@@ -478,6 +479,7 @@ export class LifecycleService {
     task: LifecycleTask,
     reason: "created" | "completed" | "archived" | "restored",
   ): void {
+    this.safe(() => this.events?.onTaskChanged?.(task));
     this.safe(() => this.reminders?.syncTask(task.id));
     if (reason === "completed") this.safe(() => this.events?.onCompleted(task));
     this.safe(() => this.events?.onChanged(reason));

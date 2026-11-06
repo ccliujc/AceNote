@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const native = vi.hoisted(() => {
   const windows: FakeWindow[] = [];
@@ -55,8 +55,8 @@ const native = vi.hoisted(() => {
   }
   return { windows, area, menus, FakeWindow, ipcOn };
 });
-vi.mock('electron', () => ({
-  app: { getPath: () => '/tmp/acenote-window-test' },
+vi.mock("electron", () => ({
+  app: { getPath: () => "/tmp/acenote-window-test" },
   BrowserWindow: native.FakeWindow,
   ipcMain: { handle: vi.fn(), on: native.ipcOn },
   Menu: {
@@ -71,14 +71,14 @@ vi.mock('electron', () => ({
     getDisplayNearestPoint: () => ({ workArea: native.area }),
   },
 }));
-vi.mock('../src/main/pet-position', () => ({
+vi.mock("../src/main/pet-position", () => ({
   readPosition: vi.fn(() => null),
   writePosition: vi.fn(),
   defaultPosition: () => ({ x: 1000, y: 430 }),
   clampPosition: (point: { x: number; y: number }) => point,
 }));
-import { WindowManager } from '../src/main/windows/window-manager';
-import { readPosition, writePosition } from '../src/main/pet-position';
+import { WindowManager } from "../src/main/windows/window-manager";
+import { readPosition, writePosition } from "../src/main/pet-position";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -87,8 +87,8 @@ beforeEach(() => {
   native.menus.length = 0;
   Object.assign(native.area, { x: 0, y: 0, width: 1280, height: 800 });
 });
-describe('floating-first window lifecycle', () => {
-  it('reserves message space above the character while preserving saved character positions', () => {
+describe("floating-first window lifecycle", () => {
+  it("reserves message space above the character while preserving saved character positions", () => {
     vi.mocked(readPosition).mockReturnValue({ x: 1000, y: 550 });
     const manager = new WindowManager(vi.fn());
     manager.createWindows();
@@ -96,45 +96,45 @@ describe('floating-first window lifecycle', () => {
     expect(pet.bounds).toEqual({ x: 1000, y: 430, width: 220, height: 340 });
     const handler = (name: string) =>
       native.ipcOn.mock.calls.find(([channel]) => channel === name)![1];
-    handler('pet:drag-start')({}, 1100, 650);
-    handler('pet:drag-move')({}, 1120, 660);
-    handler('pet:drag-end')({});
+    handler("pet:drag-start")({}, 1100, 650);
+    handler("pet:drag-move")({}, 1120, 660);
+    handler("pet:drag-end")({});
     expect(pet.setPosition).toHaveBeenLastCalledWith(1020, 440);
     expect(writePosition).toHaveBeenLastCalledWith(
-      '/tmp/acenote-window-test/pet-position.json',
+      "/tmp/acenote-window-test/pet-position.json",
       { x: 1020, y: 560 },
     );
     manager.openQuickInput();
     const quick = native.windows[1]!;
-    quick.listeners.get('ready-to-show')!();
+    quick.listeners.get("ready-to-show")!();
     expect(quick.bounds.y + quick.bounds.height).toBe(
       pet.bounds.y + pet.bounds.height,
     );
   });
-  it('starts with only the pet and activates only the floating input', () => {
+  it("starts with only the pet and activates only the floating input", () => {
     const manager = new WindowManager(vi.fn());
     manager.createWindows();
     expect(native.windows).toHaveLength(1);
     expect(manager.mainWindow).toBeNull();
-    native.windows[0]!.listeners.get('ready-to-show')!();
+    native.windows[0]!.listeners.get("ready-to-show")!();
     manager.activate();
     manager.activate();
     expect(native.windows).toHaveLength(2);
     expect(manager.mainWindow).toBeNull();
     const quick = native.windows[1]!;
     expect(quick.show).not.toHaveBeenCalled();
-    quick.listeners.get('ready-to-show')!();
+    quick.listeners.get("ready-to-show")!();
     expect(quick.show).toHaveBeenCalledOnce();
     manager.activate();
     expect(quick.show).toHaveBeenCalledTimes(2);
     expect(native.windows).toHaveLength(2);
   });
-  it('hides and reuses the same floating renderer so drafts survive reopening', () => {
+  it("hides and reuses the same floating renderer so drafts survive reopening", () => {
     const manager = new WindowManager(vi.fn());
     manager.createWindows();
     manager.openQuickInput();
     const quick = native.windows[1]!;
-    quick.listeners.get('ready-to-show')!();
+    quick.listeners.get("ready-to-show")!();
     expect(quick.options).toMatchObject({
       width: 360,
       height: 560,
@@ -160,23 +160,23 @@ describe('floating-first window lifecycle', () => {
     });
     expect(manager.mainWindow).toBeNull();
   });
-  it('opens full records lazily and keeps the floating window alive when they close', () => {
+  it("opens full records lazily and keeps the floating window alive when they close", () => {
     const quit = vi.fn();
     const manager = new WindowManager(quit);
     manager.createWindows();
     manager.openQuickInput();
     const pet = native.windows[0]!,
       quick = native.windows[1]!;
-    quick.listeners.get('ready-to-show')!();
+    quick.listeners.get("ready-to-show")!();
     manager.focusMain();
     manager.focusMain();
     expect(native.windows).toHaveLength(3);
     const main = native.windows[2]!;
     expect(main.show).not.toHaveBeenCalled();
-    main.listeners.get('ready-to-show')!();
+    main.listeners.get("ready-to-show")!();
     expect(main.show).toHaveBeenCalledOnce();
     const close = { preventDefault: vi.fn() };
-    main.listeners.get('close')!(close);
+    main.listeners.get("close")!(close);
     expect(close.preventDefault).toHaveBeenCalledOnce();
     expect(main.hide).toHaveBeenCalledOnce();
     expect(quick.hide).not.toHaveBeenCalled();
@@ -184,10 +184,10 @@ describe('floating-first window lifecycle', () => {
     expect(pet.close).not.toHaveBeenCalled();
     expect(manager.quickWindow).toBe(quick);
     expect(quit).not.toHaveBeenCalled();
-    manager.broadcast('data:changed', { reason: 'created' });
+    manager.broadcast("data:changed", { reason: "created" });
     for (const window of [pet, quick, main])
-      expect(window.webContents.send).toHaveBeenCalledWith('data:changed', {
-        reason: 'created',
+      expect(window.webContents.send).toHaveBeenCalledWith("data:changed", {
+        reason: "created",
       });
     manager.focusMain();
     expect(main.show).toHaveBeenCalledTimes(2);
@@ -196,50 +196,71 @@ describe('floating-first window lifecycle', () => {
     manager.focusMain();
     expect(main.restore).toHaveBeenCalledOnce();
   });
-  it('allows full shutdown and does not reopen windows while quitting', () => {
+  it("allows full shutdown and does not reopen windows while quitting", () => {
     const manager = new WindowManager(vi.fn());
     manager.createWindows();
     manager.focusMain();
     const main = native.windows[1]!;
     manager.prepareToQuit();
     const close = { preventDefault: vi.fn() };
-    main.listeners.get('close')!(close);
+    main.listeners.get("close")!(close);
     expect(close.preventDefault).not.toHaveBeenCalled();
     expect(main.hide).not.toHaveBeenCalled();
-    main.listeners.get('ready-to-show')!();
+    main.listeners.get("ready-to-show")!();
     expect(main.show).not.toHaveBeenCalled();
-    main.listeners.get('closed')!();
+    main.listeners.get("closed")!();
     manager.activate();
     manager.focusMain();
     manager.openQuickInput();
     expect(manager.mainWindow).toBeNull();
     expect(native.windows).toHaveLength(2);
   });
-  it('retains an explicit quit command in the pet menu', () => {
+  it("retains an explicit quit command in the pet menu", () => {
     const quit = vi.fn();
     const manager = new WindowManager(quit);
     manager.createWindows();
     const pet = native.windows[0]!;
     pet.webContents.on.mock.calls.find(
-      ([name]) => name === 'context-menu',
+      ([name]) => name === "context-menu",
     )![1]();
     const items = native.menus.at(-1)!;
-    items.find((item) => item.label === '退出 AceNote')!.click!();
+    items.find((item) => item.label === "退出 AceNote")!.click!();
     expect(quit).toHaveBeenCalledOnce();
     expect(manager.mainWindow).toBeNull();
   });
-  it('fits a smaller display work area, including a negative screen origin', () => {
+  it("fits a smaller display work area, including a negative screen origin", () => {
     Object.assign(native.area, { x: -320, y: 20, width: 320, height: 480 });
     const manager = new WindowManager(vi.fn());
     manager.createWindows();
     manager.openQuickInput();
     const quick = native.windows[1]!;
-    quick.listeners.get('ready-to-show')!();
+    quick.listeners.get("ready-to-show")!();
     expect(quick.setBounds).toHaveBeenLastCalledWith({
       x: -320,
       y: 20,
       width: 320,
       height: 480,
     });
+  });
+  it("continues broadcasting when another receiver disappears during delivery", () => {
+    const manager = new WindowManager(vi.fn());
+    manager.createWindows();
+    manager.openQuickInput();
+    manager.focusMain();
+    const pet = native.windows[0]!,
+      quick = native.windows[1]!,
+      main = native.windows[2]!;
+    main.webContents.send.mockImplementationOnce(() => {
+      throw new Error("renderer gone");
+    });
+    manager.broadcast("reminder:active-changed", { revision: 2 });
+    expect(pet.webContents.send).toHaveBeenCalledWith(
+      "reminder:active-changed",
+      { revision: 2 },
+    );
+    expect(quick.webContents.send).toHaveBeenCalledWith(
+      "reminder:active-changed",
+      { revision: 2 },
+    );
   });
 });

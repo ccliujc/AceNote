@@ -1,43 +1,44 @@
-import { useRef, useState } from 'react';
-import type { ReminderView } from '@acenote/contracts';
+import { useRef, useState } from "react";
+import type { ActiveReminder } from "@acenote/contracts";
 
 interface ReminderCenterProps {
-  reminders: ReminderView[];
-  onDismiss: (reminder: ReminderView) => void | Promise<void>;
+  reminders: ActiveReminder[];
+  onDismiss: (reminder: ActiveReminder) => void | Promise<void>;
 }
 
 function ReminderCard({
   reminder,
   onDismiss,
 }: {
-  reminder: ReminderView;
-  onDismiss: ReminderCenterProps['onDismiss'];
+  reminder: ActiveReminder;
+  onDismiss: ReminderCenterProps["onDismiss"];
 }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const lock = useRef(false);
   async function dismiss() {
     if (lock.current) return;
     lock.current = true;
     setBusy(true);
-    setError('');
+    setError("");
     try {
       await onDismiss(reminder);
     } catch {
-      setError('关闭失败，请再试一次。');
+      setError("关闭失败，请再试一次。");
     } finally {
       lock.current = false;
       setBusy(false);
     }
   }
+  const view = reminder.reminder;
   return (
     <article className="reminder-card" aria-busy={busy}>
       <div>
         <p className="eyebrow">该上场了</p>
-        <h3>{reminder.title}</h3>
+        <h3>{view.title}</h3>
         <span>
-          截止 {reminder.dueDate}
-          {reminder.dueTime ? ` ${reminder.dueTime}` : ' 09:00'}
+          截止 {view.dueDate}
+          {view.dueTime ? ` ${view.dueTime}` : " 09:00"}
         </span>
         {error && (
           <p className="form-error" role="alert">
@@ -46,11 +47,11 @@ function ReminderCard({
         )}
       </div>
       <button
-        aria-label={`关闭提醒 ${reminder.title}`}
+        aria-label={`关闭提醒 ${view.title}`}
         disabled={busy}
         onClick={() => void dismiss()}
       >
-        {busy ? '…' : '×'}
+        {busy ? "…" : "×"}
       </button>
     </article>
   );
@@ -58,14 +59,14 @@ function ReminderCard({
 export function ReminderCenter({ reminders, onDismiss }: ReminderCenterProps) {
   if (reminders.length === 0) return null;
   return (
-    <aside className="reminder-center" aria-live="polite" aria-label="截止提醒">
+    <div className="reminder-list" aria-label="截止提醒">
       {reminders.map((reminder) => (
         <ReminderCard
-          key={reminder.id}
+          key={reminder.activationId}
           reminder={reminder}
           onDismiss={onDismiss}
         />
       ))}
-    </aside>
+    </div>
   );
 }

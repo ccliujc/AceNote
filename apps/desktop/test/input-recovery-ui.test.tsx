@@ -1,3 +1,4 @@
+import { reminderApiFixture } from "./active-reminder-fixtures";
 import "@testing-library/jest-dom/vitest";
 import {
   act,
@@ -101,7 +102,7 @@ function lifecycle(): LifecycleApi {
     restoreTask: vi.fn(),
   };
 }
-const reminderApi = { onReminderDue: () => () => {}, dismissReminder: vi.fn() };
+const reminderApi = reminderApiFixture();
 const experienceApi = {
   onDataChanged: () => () => {},
   onTaskCompleted: () => () => {},

@@ -11,7 +11,8 @@ import type {
   LifecycleApi,
   LifecycleTask,
   ReminderApi,
-  ReminderDueEvent,
+  ActiveReminderState,
+  ActiveReminderReadApi,
   TaskCompletedEvent,
   TaskStatusFilter,
   RecoveryApi,
@@ -103,17 +104,89 @@ const lifecycle: LifecycleApi = {
     ) as Promise<LifecycleTask>,
 };
 
+// Keep this bridge self-contained: sandboxed preloads cannot require shared chunks.
+function isActiveReminderState(
+  payload: unknown,
+): payload is ActiveReminderState {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Object.keys(payload).length !== 3
+  )
+    return false;
+  const state = payload as ActiveReminderState;
+  const uuid = (value: unknown) =>
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  if (
+    !uuid(state.sessionId) ||
+    !Number.isInteger(state.revision) ||
+    state.revision < 0 ||
+    !Array.isArray(state.reminders)
+  )
+    return false;
+  const ids = new Set<string>(),
+    tasks = new Set<string>();
+  return state.reminders.every((item) => {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      Object.keys(item).length !== 2 ||
+      !uuid(item.activationId) ||
+      ids.has(item.activationId)
+    )
+      return false;
+    const r = item.reminder;
+    if (
+      !r ||
+      typeof r !== "object" ||
+      Object.keys(r).length !== 6 ||
+      !uuid(r.id) ||
+      !uuid(r.taskId) ||
+      tasks.has(r.taskId) ||
+      typeof r.title !== "string" ||
+      !r.title.trim() ||
+      typeof r.dueDate !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(r.dueDate) ||
+      !(
+        r.dueTime === null ||
+        (typeof r.dueTime === "string" &&
+          /^([01]\d|2[0-3]):[0-5]\d$/.test(r.dueTime))
+      ) ||
+      typeof r.scheduledAt !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T/.test(r.scheduledAt) ||
+      !Number.isFinite(Date.parse(r.scheduledAt))
+    )
+      return false;
+    ids.add(item.activationId);
+    tasks.add(r.taskId);
+    return true;
+  });
+}
+function createActiveReminderReadApi(): ActiveReminderReadApi {
+  return {
+    getActiveReminders: () =>
+      ipcRenderer.invoke("reminder:active") as Promise<ActiveReminderState>,
+    onActiveRemindersChanged: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+        if (isActiveReminderState(payload)) listener(payload);
+      };
+      ipcRenderer.on("reminder:active-changed", handler);
+      return () =>
+        ipcRenderer.removeListener("reminder:active-changed", handler);
+    },
+  };
+}
+
 const reminder: ReminderApi = {
-  onReminderDue: (listener) => {
-    const handler = (
-      _event: Electron.IpcRendererEvent,
-      payload: ReminderDueEvent,
-    ) => listener(payload);
-    ipcRenderer.on("reminder:due", handler);
-    return () => ipcRenderer.removeListener("reminder:due", handler);
-  },
-  dismissReminder: (reminderId: string) =>
-    ipcRenderer.invoke("reminder:dismiss", reminderId) as Promise<void>,
+  ...createActiveReminderReadApi(),
+  dismissReminder: (reference) =>
+    ipcRenderer.invoke(
+      "reminder:dismiss",
+      reference,
+    ) as Promise<ActiveReminderState>,
 };
 
 const experience: ExperienceApi = {

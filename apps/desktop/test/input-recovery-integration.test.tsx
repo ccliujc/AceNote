@@ -1,3 +1,4 @@
+import { reminderApiFixture } from "./active-reminder-fixtures";
 import "@testing-library/jest-dom/vitest";
 import {
   render,
@@ -100,10 +101,7 @@ describe("F01 file recovery and two renderer integration", () => {
                 updateTask: async (id, patch, rev) =>
                   tasks.update(id, patch, rev),
               }}
-              reminderApi={{
-                onReminderDue: () => () => {},
-                dismissReminder: vi.fn(),
-              }}
+              reminderApi={reminderApiFixture()}
               experienceApi={{
                 onDataChanged: subscribe,
                 onTaskCompleted: () => () => {},

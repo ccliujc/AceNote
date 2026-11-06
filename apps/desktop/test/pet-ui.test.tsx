@@ -1,23 +1,34 @@
-import '@testing-library/jest-dom/vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { PetApi } from '@acenote/contracts';
-import { PetApp } from '../src/renderer/pet/pet-app';
+import { sessionId } from "./active-reminder-fixtures";
+import "@testing-library/jest-dom/vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  ActiveReminderState,
+  ReminderDueEvent,
+  PetApi,
+} from "@acenote/contracts";
+import { PetApp } from "../src/renderer/pet/pet-app";
 
 afterEach(() => vi.useRealTimers());
 function setup() {
-  let completed!: Parameters<PetApi['onTaskCompleted']>[0];
-  let remind!: Parameters<PetApi['onReminderDue']>[0];
+  let completed!: Parameters<PetApi["onTaskCompleted"]>[0];
+  let due!: Parameters<PetApi["onReminderDue"]>[0];
+  let changed!: (state: ActiveReminderState) => void;
   const off = vi.fn();
   const api: PetApi = {
+    getActiveReminders: vi.fn(() => new Promise<ActiveReminderState>(() => {})),
+    onActiveRemindersChanged: (listener) => {
+      changed = listener;
+      return () => {};
+    },
     onDataChanged: vi.fn(() => () => {}),
     onTaskCompleted: vi.fn((listener) => {
       completed = listener;
       return off;
     }),
     onReminderDue: vi.fn((listener) => {
-      remind = listener;
+      due = listener;
       return off;
     }),
     openToday: vi.fn().mockResolvedValue(undefined),
@@ -29,64 +40,74 @@ function setup() {
   };
   window.pet = api;
   const view = render(<PetApp />);
+  const remind = (event: ReminderDueEvent) => {
+    changed({
+      sessionId,
+      revision: event.revision,
+      reminders: [
+        { activationId: event.activationId, reminder: event.reminder },
+      ],
+    });
+    due(event);
+  };
   return { api, completed, remind, off, ...view };
 }
-describe('Pet message interaction', () => {
-  it('keeps a completion visible for 15 seconds independently of its animation', () => {
+describe("Pet message interaction", () => {
+  it("keeps a completion visible for 15 seconds independently of its animation", () => {
     vi.useFakeTimers();
     const { completed, api } = setup();
-    act(() => completed({ taskId: '1', title: '写周报' }));
-    fireEvent.mouseMove(screen.getByRole('status'), {
+    act(() => completed({ taskId: "1", title: "写周报" }));
+    fireEvent.mouseMove(screen.getByRole("status"), {
       clientX: 10,
       clientY: 10,
     });
     expect(api.setInteractive).toHaveBeenLastCalledWith(true);
     act(() => vi.advanceTimersByTime(14_999));
-    expect(screen.getByRole('status')).toHaveTextContent('写周报');
+    expect(screen.getByRole("status")).toHaveTextContent("写周报");
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(api.setInteractive).toHaveBeenLastCalledWith(false);
     expect(vi.getTimerCount()).toBe(0);
   });
-  it('restarts the full 15 seconds even when the same completion arrives again', () => {
+  it("restarts the full 15 seconds even when the same completion arrives again", () => {
     vi.useFakeTimers();
     const { completed } = setup();
-    act(() => completed({ taskId: '1', title: '写周报' }));
+    act(() => completed({ taskId: "1", title: "写周报" }));
     act(() => vi.advanceTimersByTime(10_000));
-    act(() => completed({ taskId: '1', title: '写周报' }));
+    act(() => completed({ taskId: "1", title: "写周报" }));
     act(() => vi.advanceTimersByTime(14_999));
-    expect(screen.getByRole('status')).toHaveTextContent('写周报');
+    expect(screen.getByRole("status")).toHaveTextContent("写周报");
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
-  it('releases the empty message area while keeping the character interactive', () => {
+  it("releases the empty message area while keeping the character interactive", () => {
     const { api, container } = setup();
-    const stage = container.querySelector('.pet-stage')!;
+    const stage = container.querySelector(".pet-stage")!;
     fireEvent.mouseMove(stage, { clientX: 100, clientY: 180 });
     expect(api.setInteractive).toHaveBeenLastCalledWith(true);
     fireEvent.mouseMove(stage, { clientX: 100, clientY: 70 });
     expect(api.setInteractive).toHaveBeenLastCalledWith(false);
   });
-  it('keeps a stationary pointer over the character interactive after the message expires', () => {
+  it("keeps a stationary pointer over the character interactive after the message expires", () => {
     vi.useFakeTimers();
     const { api, completed, container } = setup();
-    act(() => completed({ taskId: '1', title: '写周报' }));
-    fireEvent.mouseMove(container.querySelector('.pet-stage')!, {
+    act(() => completed({ taskId: "1", title: "写周报" }));
+    fireEvent.mouseMove(container.querySelector(".pet-stage")!, {
       clientX: 100,
       clientY: 180,
     });
     act(() => vi.advanceTimersByTime(15_000));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(api.setInteractive).toHaveBeenLastCalledWith(true);
   });
-  it('still opens schedule input after a tiny mouse movement during a click', () => {
+  it("still opens schedule input after a tiny mouse movement during a click", () => {
     vi.useFakeTimers();
     const { api, container } = setup();
-    const character = container.querySelector<HTMLElement>('.pet-character')!;
+    const character = container.querySelector<HTMLElement>(".pet-character")!;
     character.setPointerCapture = vi.fn();
     fireEvent(
       character,
-      new MouseEvent('pointerdown', {
+      new MouseEvent("pointerdown", {
         bubbles: true,
         button: 0,
         screenX: 100,
@@ -95,74 +116,74 @@ describe('Pet message interaction', () => {
     );
     fireEvent(
       character,
-      new MouseEvent('pointermove', {
+      new MouseEvent("pointermove", {
         bubbles: true,
         screenX: 102,
         screenY: 102,
       }),
     );
-    fireEvent(character, new MouseEvent('pointerup', { bubbles: true }));
+    fireEvent(character, new MouseEvent("pointerup", { bubbles: true }));
     fireEvent.click(character);
     act(() => vi.advanceTimersByTime(230));
     expect(api.openToday).toHaveBeenCalledOnce();
     expect(api.dragTo).not.toHaveBeenCalled();
   });
-  it('plays the human player hit and celebration poses before returning to ready', () => {
+  it("plays the human player hit and celebration poses before returning to ready", () => {
     vi.useFakeTimers();
     const { completed, container } = setup();
-    const character = container.querySelector('.pet-character')!;
-    act(() => completed({ taskId: '1', title: '写周报' }));
-    expect(character).toHaveClass('mood-hit');
-    expect(screen.getByRole('img')).toHaveAttribute(
-      'src',
-      expect.stringContaining('ryoma-hit'),
+    const character = container.querySelector(".pet-character")!;
+    act(() => completed({ taskId: "1", title: "写周报" }));
+    expect(character).toHaveClass("mood-hit");
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      expect.stringContaining("ryoma-hit"),
     );
     act(() => vi.advanceTimersByTime(700));
-    expect(character).toHaveClass('mood-ace');
-    expect(screen.getByRole('img')).toHaveAttribute(
-      'src',
-      expect.stringContaining('ryoma-ace'),
+    expect(character).toHaveClass("mood-ace");
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      expect.stringContaining("ryoma-ace"),
     );
     act(() => vi.advanceTimersByTime(900));
-    expect(character).toHaveClass('mood-idle');
+    expect(character).toHaveClass("mood-idle");
   });
-  it('closes a long message without dragging or opening another window', async () => {
+  it("closes a long message without dragging or opening another window", async () => {
     const { api, completed } = setup();
     act(() =>
       completed({
-        taskId: '11111111-1111-4111-8111-111111111111',
-        title: '很长的任务标题'.repeat(20),
+        taskId: "11111111-1111-4111-8111-111111111111",
+        title: "很长的任务标题".repeat(20),
       }),
     );
-    expect(screen.getByRole('status')).toHaveTextContent('很长的任务标题');
-    await userEvent.click(screen.getByRole('button', { name: '关闭桌宠消息' }));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("很长的任务标题");
+    await userEvent.click(screen.getByRole("button", { name: "关闭桌宠消息" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(api.startDrag).not.toHaveBeenCalled();
     expect(api.openToday).not.toHaveBeenCalled();
   });
-  it('cancels manual-dismiss deadlines before displaying a later message', () => {
+  it("cancels manual-dismiss deadlines before displaying a later message", () => {
     vi.useFakeTimers();
     const { completed } = setup();
-    act(() => completed({ taskId: '1', title: '写周报' }));
+    act(() => completed({ taskId: "1", title: "写周报" }));
     act(() => vi.advanceTimersByTime(10_000));
-    fireEvent.click(screen.getByRole('button', { name: '关闭桌宠消息' }));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    act(() => completed({ taskId: '2', title: '整理材料' }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭桌宠消息" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    act(() => completed({ taskId: "2", title: "整理材料" }));
     act(() => vi.advanceTimersByTime(5_000));
-    expect(screen.getByRole('status')).toHaveTextContent('整理材料');
+    expect(screen.getByRole("status")).toHaveTextContent("整理材料");
     act(() => vi.advanceTimersByTime(10_000));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
-  it('keeps the bubble interactive and releases timers and subscriptions on unmount', () => {
+  it("keeps the bubble interactive and releases timers and subscriptions on unmount", () => {
     vi.useFakeTimers();
     const { api, completed, off, unmount } = setup();
     act(() =>
       completed({
-        taskId: '11111111-1111-4111-8111-111111111111',
-        title: '写周报',
+        taskId: "11111111-1111-4111-8111-111111111111",
+        title: "写周报",
       }),
     );
-    fireEvent.mouseMove(screen.getByRole('button', { name: '关闭桌宠消息' }), {
+    fireEvent.mouseMove(screen.getByRole("button", { name: "关闭桌宠消息" }), {
       clientX: 10,
       clientY: 10,
     });
@@ -171,10 +192,10 @@ describe('Pet message interaction', () => {
     expect(off).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);
   });
-  it('opens only floating input on clicks and double clicks and returns to idle after a reminder', () => {
+  it("opens only floating input on clicks and double clicks and returns to idle after a reminder", () => {
     vi.useFakeTimers();
     const { api, remind, container } = setup();
-    const character = container.querySelector('.pet-character')!;
+    const character = container.querySelector(".pet-character")!;
     fireEvent.click(character);
     act(() => vi.advanceTimersByTime(230));
     expect(api.openToday).toHaveBeenCalledOnce();
@@ -185,30 +206,33 @@ describe('Pet message interaction', () => {
     expect(api.focusMain).not.toHaveBeenCalled();
     act(() =>
       remind({
+        sessionId,
+        revision: 1,
+        activationId: "22222222-2222-4222-8222-222222222222",
         reminder: {
-          id: '1',
-          taskId: '2',
-          title: '提醒事项',
-          dueDate: '2026-10-29',
+          id: "33333333-3333-4333-8333-333333333333",
+          taskId: "33333333-3333-4333-8333-333333333333",
+          title: "提醒事项",
+          dueDate: "2026-10-29",
           dueTime: null,
-          scheduledAt: '2026-10-29T01:00:00Z',
+          scheduledAt: "2026-10-29T01:00:00Z",
         },
       }),
     );
-    expect(character).toHaveClass('mood-reminder');
+    expect(character).toHaveClass("mood-reminder");
     act(() => vi.advanceTimersByTime(950));
-    expect(character).toHaveClass('mood-idle');
-    fireEvent.mouseLeave(container.querySelector('.pet-stage')!);
+    expect(character).toHaveClass("mood-idle");
+    fireEvent.mouseLeave(container.querySelector(".pet-stage")!);
     expect(api.setInteractive).toHaveBeenLastCalledWith(false);
   });
-  it('saves a drag and suppresses the click at its end', () => {
+  it("saves a drag and suppresses the click at its end", () => {
     vi.useFakeTimers();
     const { api, container } = setup();
-    const character = container.querySelector<HTMLElement>('.pet-character')!;
+    const character = container.querySelector<HTMLElement>(".pet-character")!;
     character.setPointerCapture = vi.fn();
     fireEvent(
       character,
-      new MouseEvent('pointerdown', {
+      new MouseEvent("pointerdown", {
         bubbles: true,
         button: 0,
         screenX: 100,
@@ -217,13 +241,13 @@ describe('Pet message interaction', () => {
     );
     fireEvent(
       character,
-      new MouseEvent('pointermove', {
+      new MouseEvent("pointermove", {
         bubbles: true,
         screenX: 120,
         screenY: 130,
       }),
     );
-    fireEvent(character, new MouseEvent('pointerup', { bubbles: true }));
+    fireEvent(character, new MouseEvent("pointerup", { bubbles: true }));
     fireEvent.click(character);
     act(() => vi.advanceTimersByTime(230));
     expect(api.startDrag).toHaveBeenCalledWith(100, 100);

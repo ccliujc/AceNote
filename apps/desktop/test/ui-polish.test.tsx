@@ -1,3 +1,4 @@
+import { reminderApiFixture } from "./active-reminder-fixtures";
 import "@testing-library/jest-dom/vitest";
 import {
   act,
@@ -68,7 +69,7 @@ function setup(overrides: Partial<LifecycleApi> = {}) {
     <LifecyclePage
       api={api}
       editorApi={{ updateTask: vi.fn() } as unknown as EditorApi}
-      reminderApi={{ onReminderDue: () => () => {}, dismissReminder: vi.fn() }}
+      reminderApi={reminderApiFixture()}
       experienceApi={{
         onDataChanged: () => () => {},
         onTaskCompleted: () => () => {},

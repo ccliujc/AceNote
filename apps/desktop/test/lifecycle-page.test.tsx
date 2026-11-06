@@ -1,3 +1,4 @@
+import { reminderApiFixture } from "./active-reminder-fixtures";
 import "@testing-library/jest-dom/vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
@@ -56,10 +57,7 @@ function api(overrides: Partial<LifecycleApi> = {}): LifecycleApi {
   };
 }
 const editorApi = { updateTask: vi.fn() } as unknown as EditorApi;
-const reminderApi = {
-  onReminderDue: vi.fn(() => () => {}),
-  dismissReminder: vi.fn().mockResolvedValue(undefined),
-};
+const reminderApi = reminderApiFixture();
 const experienceApi = {
   onDataChanged: vi.fn(() => () => {}),
   onTaskCompleted: vi.fn(() => () => {}),

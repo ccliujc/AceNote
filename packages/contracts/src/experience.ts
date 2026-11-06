@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { reminderDueEventSchema } from "./reminders";
+import {
+  activeReminderStateSchema,
+  reminderDueEventSchema,
+  type ActiveReminderReadApi,
+} from "./reminders";
 import type { RecoverySummaryApi } from "./recovery";
 import type {
   DailyCompletionSummary,
@@ -28,6 +32,10 @@ export const experienceEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("reminder:due"),
     payload: reminderDueEventSchema,
+  }),
+  z.object({
+    type: z.literal("reminder:active-changed"),
+    payload: activeReminderStateSchema,
   }),
 ]);
 
@@ -59,7 +67,7 @@ export interface QuickInputApi
   onDataChanged: (listener: () => void) => () => void;
 }
 
-export interface PetApi extends ExperienceApi {
+export interface PetApi extends ExperienceApi, ActiveReminderReadApi {
   openToday: () => Promise<void>;
   focusMain: () => Promise<void>;
   startDrag: (screenX: number, screenY: number) => void;

@@ -8,7 +8,6 @@ import type {
   LifecycleApi,
   LifecycleTask,
   ReminderApi,
-  ReminderView,
   TaskStatusFilter,
   RecoveryApi,
 } from "@acenote/contracts";
@@ -17,7 +16,7 @@ import { CaptureComposer } from "./capture-composer";
 import { LifecycleTaskList } from "./lifecycle-task-list";
 import { CompletionPicker } from "./completion-picker";
 import { CourtView } from "./court-view";
-import { ReminderCenter } from "./reminder-center";
+import { ActiveReminderCenter } from "./active-reminder-center";
 import { TaskEditor } from "./task-editor";
 import { RecoverableInputs } from "./recoverable-inputs";
 import { useInputInvalidation } from "./use-input-invalidation";
@@ -72,7 +71,6 @@ export function LifecyclePage({
   } | null>(null);
   const [selectionError, setSelectionError] = useState("");
   const [editing, setEditing] = useState<LifecycleTask | null>(null);
-  const [reminders, setReminders] = useState<ReminderView[]>([]);
   const request = useRef(0);
   const inputLock = useRef(false);
   const taskLock = useRef(false);
@@ -122,19 +120,6 @@ export function LifecyclePage({
   useEffect(
     () => experienceApi.onDataChanged(() => void latestRefresh.current()),
     [experienceApi],
-  );
-  useEffect(
-    () =>
-      reminderApi.onReminderDue(({ reminder }) => {
-        setReminders((current) =>
-          current.some((item) => item.id === reminder.id)
-            ? current
-            : [...current, reminder].sort((a, b) =>
-                a.scheduledAt.localeCompare(b.scheduledAt),
-              ),
-        );
-      }),
-    [reminderApi],
   );
 
   const current = snapshot?.date === date ? snapshot : null;
@@ -402,15 +387,7 @@ export function LifecyclePage({
           </span>
           <span>ACE THE EVERYDAY</span>
         </footer>
-        <ReminderCenter
-          reminders={reminders}
-          onDismiss={async (reminder) => {
-            await reminderApi.dismissReminder(reminder.id);
-            setReminders((current) =>
-              current.filter((item) => item.id !== reminder.id),
-            );
-          }}
-        />
+        <ActiveReminderCenter api={reminderApi} />
         {selection && !editing && (
           <CompletionPicker
             candidates={selection.candidates}

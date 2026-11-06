@@ -4,6 +4,8 @@
 
 2026-10-30：新增明确时刻省略日期默认今天的解析规则，见 [SPEC-time-only-today.md](SPEC-time-only-today.md)；已过时刻仍不补发，提醒调度规则不变。
 
+2026-11-05：F02 已补齐当前会话活动查询、精确触发关闭与跨窗口同步，见 [归档增量规格](../openspec/changes/archive/2026-11-06-sync-active-reminders/specs/reminders/spec.md) 和 [验收记录](../tasks/verification-f02-active-reminders.md)。不增加数据库迁移或跨重启活动历史；2026-11-06 已同步正式 OpenSpec Requirements 并归档。
+
 ## 目标
 
 在桌面应用运行期间，对具有明确截止时间的未完成待办触发一次应用内提醒。只有日期的事项在当地时间 09:00 提醒；没有截止信息的任务永不提醒。
@@ -140,18 +142,28 @@ AceNote/
 沿用严格 TypeScript、Zod 边界和主进程独占 SQLite。时间计算集中在纯函数中，禁止组件自行计算提醒。
 
 ```ts
-export function reminderAt(dueDate: string, dueTime: string | null, timeZone: string): Date | null {
+export function reminderAt(
+  dueDate: string,
+  dueTime: string | null,
+  timeZone: string,
+): Date | null {
   if (!dueDate) return null;
-  const time = dueTime ?? '09:00';
+  const time = dueTime ?? "09:00";
   const local = `${dueDate}T${time}:00`;
   const instant = zonedTimeToUtc(local, timeZone);
   return instant.getTime() > 0 ? instant : null;
 }
 
-export function shouldFire(reminder: Reminder, sessionStartedAt: Date, now: Date): boolean {
-  return reminder.status === 'scheduled'
-    && reminder.scheduledAt >= sessionStartedAt
-    && reminder.scheduledAt <= now;
+export function shouldFire(
+  reminder: Reminder,
+  sessionStartedAt: Date,
+  now: Date,
+): boolean {
+  return (
+    reminder.status === "scheduled" &&
+    reminder.scheduledAt >= sessionStartedAt &&
+    reminder.scheduledAt <= now
+  );
 }
 ```
 

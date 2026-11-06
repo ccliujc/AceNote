@@ -14,6 +14,7 @@ import {
 import { ReminderRepository } from "./reminder-repository";
 import { ReminderService } from "./reminder-service";
 import { ReminderScheduler } from "./reminder-scheduler";
+import { ActiveReminderService } from "./active-reminder-service";
 import { WindowManager } from "./windows/window-manager";
 import { registerApplicationLifecycle } from "./application-lifecycle";
 import {
@@ -30,6 +31,15 @@ void app.whenReady().then(() => {
   const reminderRepository = new ReminderRepository(database);
   const reminderService = new ReminderService(repository, reminderRepository);
   const windows = new WindowManager(() => app.quit());
+  const sessionStartedAt = new Date();
+  const activeReminders = new ActiveReminderService(
+    repository,
+    reminderRepository,
+    {
+      onChanged: (state) => windows.broadcast("reminder:active-changed", state),
+      onDue: (event) => windows.broadcast("reminder:due", event),
+    },
+  );
 
   const lifecycleService = new LifecycleService(
     repository,
@@ -37,6 +47,7 @@ void app.whenReady().then(() => {
     createIntentParser(),
     reminderService,
     {
+      onTaskChanged: (task) => activeReminders.reconcileTask(task),
       onChanged: (reason) => windows.broadcast("data:changed", { reason }),
       onCompleted: (task: LifecycleTask) =>
         windows.broadcast("task:completed", {
@@ -51,21 +62,28 @@ void app.whenReady().then(() => {
     },
   );
   lifecycleService.recoverInterrupted();
-  registerEditorIpc(repository, (id) => {
-    reminderService.syncTask(id);
-    windows.broadcast("data:changed", { reason: "updated" });
+  registerEditorIpc(repository, (id, task) => {
+    activeReminders.reconcileTask(task);
+    try {
+      reminderService.syncTask(id);
+    } finally {
+      windows.broadcast("data:changed", { reason: "updated" });
+    }
   });
   registerLifecycleIpc(lifecycleService);
   registerRecoveryIpc(lifecycleService);
-  registerReminderIpc();
+  registerReminderIpc(activeReminders);
 
-  const scheduler = new ReminderScheduler(reminderRepository, (view) => {
-    windows.broadcast("reminder:due", { reminder: view });
+  const scheduler = new ReminderScheduler(reminderRepository, () => {}, {
+    sessionStartedAt,
+    claim: (view) => activeReminders.claim(view),
+    beforePoll: () => activeReminders.reconcile(),
   });
 
   registerApplicationLifecycle(app, windows, () => {
     lifecycleService.stop();
     scheduler.stop();
+    activeReminders.stop();
     database.close();
   });
 

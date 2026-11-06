@@ -2,7 +2,9 @@
 
 初始整理日期：2026-11-01（Asia/Shanghai）。初始代码基线：`main` / `e28e615`。
 
-2026-11-04 收尾：F01 已实现，三份增量规格已同步至正式规格，23/23 项任务完成；变更归档于 [2026-11-04-recover-submitted-inputs](changes/archive/2026-11-04-recover-submitted-inputs/proposal.md)。现有 4 项正式规格共 43 条需求、104 个情景，活动变更为 0。业务及 macOS 隔离验收见 [验收记录](../tasks/verification-f01-input-recovery.md)。
+2026-11-04 收尾：F01 已实现，三份增量规格已同步至正式规格，23/23 项任务完成；变更归档于 [2026-11-04-recover-submitted-inputs](changes/archive/2026-11-04-recover-submitted-inputs/proposal.md)。当时 4 项正式规格共 43 条需求、104 个情景，活动变更为 0。业务及 macOS 隔离验收见 [验收记录](../tasks/verification-f01-input-recovery.md)。
+
+2026-11-06 收尾：F02 已实现，两份增量规格已同步至正式规格，21/21 项任务完成；变更归档于 [2026-11-06-sync-active-reminders](changes/archive/2026-11-06-sync-active-reminders/proposal.md)。当前 4 项正式规格共 48 条需求、133 个情景，活动变更为 0；业务及 macOS 隔离验收见 [验收记录](../tasks/verification-f02-active-reminders.md)。
 
 ## 基线范围
 
@@ -12,7 +14,7 @@
 | -------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `capture`            | 文字提交、原文持久化、识别契约、时间补全、交互与重启恢复、原文转换、手动编辑       | [capture](specs/capture/spec.md)                       | [capture](../spec/SPEC-capture.md)、[默认今天](../spec/SPEC-time-only-today.md)            |
 | `task-lifecycle`     | 三态、每日记录、自然语言完成、精确手动完成、归档恢复、完成统计、输入互斥与候选复核 | [task-lifecycle](specs/task-lifecycle/spec.md)         | [任务生命周期](../spec/SPEC-task-lifecycle.md)、[手动完成](../spec/SPEC-click-complete.md) |
-| `reminders`          | 时区与截止计算、未来计划、调度去重、错过不补发、已打开窗口的事件展示               | [reminders](specs/reminders/spec.md)                   | [提醒规格](../spec/SPEC-reminders.md)                                                      |
+| `reminders`          | 时区与截止计算、未来计划、调度去重、错过不补发、会话活动查询、统一关闭与失效清理   | [reminders](specs/reminders/spec.md)                   | [提醒规格](../spec/SPEC-reminders.md)                                                      |
 | `desktop-experience` | 浮窗优先、独立关闭、会话草稿、每日浮窗、球场、人物与消息、窗口隔离、跨日期恢复入口 | [desktop-experience](specs/desktop-experience/spec.md) | [桌面体验](../spec/SPEC-desktop-experience.md)及其后续修订                                 |
 
 每份规格使用 `Purpose`、`Requirements`、`Requirement` 和 `Scenario` 结构；需求文字保留 SHALL，验收情景保留 WHEN/THEN。稳定需求名称包含 CAP、LIFE、REM 或 DESK 编号，后续修改应引用完整原名称。
@@ -21,15 +23,15 @@
 
 基线中的 `Requirements` 是已经接入现有应用的行为约定；`Known Gaps` 记录现有边界与未完成项，不能被理解为这些问题应永久保留。
 
-| 后续编号 | 核对到的边界                                                                                 | 处理位置                                                                                |
-| -------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| F01      | 已实现跨日期恢复、候选重算与重复处理保护；旧无可靠关联记录保留人工核对边界                   | [F01 验收记录](../tasks/verification-f01-input-recovery.md)；正式规格已同步，变更已归档 |
-| F02      | 提醒中心仅接收实时事件，没有首次打开后的活动快照与统一关闭状态；已经触发的残留卡片未完整同步 | reminders 的已知缺口                                                                    |
-| F03      | 旧重新识别服务与组件不在当前页面入口中                                                       | capture 的已知缺口                                                                      |
-| F04      | 首次使用说明仍仅在文档，未接入应用                                                           | 下一阶段需求草案                                                                        |
-| F05、F06 | 应用内解析配置、安装包与服务自动管理未交付                                                   | 下一阶段需求草案                                                                        |
-| F07、F08 | 账号、数据归属迁移与托管解析未交付                                                           | 下一阶段需求草案；identity 继续暂缓                                                     |
-| Q01      | 原生透明穿透、多屏、实际缩放、弱动态及断网冷启动仍待完整验收                                 | [原生待验收记录](../tasks/verification-ui-polish.md#待验收项)                           |
+| 后续编号 | 核对到的边界                                                               | 处理位置                                                                                |
+| -------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| F01      | 已实现跨日期恢复、候选重算与重复处理保护；旧无可靠关联记录保留人工核对边界 | [F01 验收记录](../tasks/verification-f01-input-recovery.md)；正式规格已同步，变更已归档 |
+| F02      | 已实现本会话活动查询、统一关闭与过期展示清理；正式规格已同步，变更已归档   | [F02 验收记录](../tasks/verification-f02-active-reminders.md)                           |
+| F03      | 旧重新识别服务与组件不在当前页面入口中                                     | capture 的已知缺口                                                                      |
+| F04      | 首次使用说明仍仅在文档，未接入应用                                         | 下一阶段需求草案                                                                        |
+| F05、F06 | 应用内解析配置、安装包与服务自动管理未交付                                 | 下一阶段需求草案                                                                        |
+| F07、F08 | 账号、数据归属迁移与托管解析未交付                                         | 下一阶段需求草案；identity 继续暂缓                                                     |
+| Q01      | 原生透明穿透、多屏、实际缩放、弱动态及断网冷启动仍待完整验收               | [原生待验收记录](../tasks/verification-ui-polish.md#待验收项)                           |
 
 详细后续要求保留在 [下一阶段需求说明书](../spec/PRD-next-release.md)。例如“今日记录按记录日期查询”“退出期间提醒不补发”“人物仍为 PNG 加 CSS”是当前产品约定，不能在接入 OpenSpec 时顺便改成新的产品行为。
 
@@ -51,9 +53,9 @@ npm run openspec -- validate --all --strict --no-interactive
 npm run openspec -- list
 ```
 
-后续可在 Codex 中使用 `$openspec-propose`，例如“根据需求草案 F02，补齐活动提醒查询与关闭状态同步”。该流程以这里的现有规格为基础创建 `openspec/changes/<name>/` 中的提案、增量规格、设计和任务，之后按用户授权范围实施。
+后续可在 Codex 中使用 `$openspec-propose`，例如“根据需求草案 F03，补齐已有事项重新识别入口”。该流程以这里的现有规格为基础创建 `openspec/changes/<name>/` 中的提案、增量规格、设计和任务，之后按用户授权范围实施。
 
-当前有 4 项正式规格；F01 已归档，活动变更为 0。后续功能先创建独立提案，再按授权范围实施。
+当前有 4 项正式规格，共 48 条需求、133 个情景；F01、F02 已同步并归档，活动变更为 0。后续功能先创建独立提案，再按授权范围实施。
 
 ## 初始基线整理的核对与验证范围（历史记录）
 

@@ -1689,3 +1689,29 @@ button {
   color: var(--success);
   font-size: 13px;
 }
+
+.reminder-center {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.reminder-heading {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 2px 4px 8px;
+}
+.reminder-state {
+  margin: 2px 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.reminder-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(40vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

@@ -1,6 +1,12 @@
-import { randomUUID } from 'node:crypto';
-import type Database from 'better-sqlite3';
-import { reminderSchema, reminderViewSchema, type Reminder, type ReminderView } from '@acenote/contracts';
+import { randomUUID } from "node:crypto";
+import { reminderAt } from "./reminder-time";
+import type Database from "better-sqlite3";
+import {
+  reminderSchema,
+  reminderViewSchema,
+  type Reminder,
+  type ReminderView,
+} from "@acenote/contracts";
 
 interface ReminderOptions {
   clock?: () => Date;
@@ -12,7 +18,7 @@ interface ReminderRow {
   task_id: string;
   scheduled_at: string;
   time_zone: string;
-  status: Reminder['status'];
+  status: Reminder["status"];
   fired_at: string | null;
   created_at: string;
   updated_at: string;
@@ -20,7 +26,8 @@ interface ReminderRow {
 
 interface DueRow extends ReminderRow {
   title: string;
-  due_date: string;
+  due_date: string | null;
+  task_time_zone: string;
   due_time: string | null;
 }
 
@@ -41,79 +48,142 @@ export class ReminderRepository {
   private readonly clock: () => Date;
   private readonly idGenerator: () => string;
 
-  constructor(private readonly database: Database.Database, options: ReminderOptions = {}) {
+  constructor(
+    private readonly database: Database.Database,
+    options: ReminderOptions = {},
+  ) {
     this.clock = options.clock ?? (() => new Date());
     this.idGenerator = options.idGenerator ?? randomUUID;
   }
 
   upsertForTask(taskId: string, scheduledAt: Date, timeZone: string): Reminder {
     const now = this.clock().toISOString();
-    this.database.prepare(`
+    this.database
+      .prepare(
+        `
       INSERT INTO reminders (id, task_id, scheduled_at, time_zone, status, fired_at, created_at, updated_at)
       VALUES (?, ?, ?, ?, 'scheduled', NULL, ?, ?)
       ON CONFLICT(task_id) DO UPDATE SET scheduled_at = excluded.scheduled_at,
         time_zone = excluded.time_zone, status = 'scheduled', fired_at = NULL, updated_at = excluded.updated_at
-    `).run(this.idGenerator(), taskId, scheduledAt.toISOString(), timeZone, now, now);
+    `,
+      )
+      .run(
+        this.idGenerator(),
+        taskId,
+        scheduledAt.toISOString(),
+        timeZone,
+        now,
+        now,
+      );
     return this.getForTask(taskId);
   }
 
   getForTask(taskId: string): Reminder {
-    const row = this.database.prepare('SELECT * FROM reminders WHERE task_id = ?').get(taskId) as ReminderRow | undefined;
-    if (!row) throw new Error('NOT_FOUND');
+    const row = this.database
+      .prepare("SELECT * FROM reminders WHERE task_id = ?")
+      .get(taskId) as ReminderRow | undefined;
+    if (!row) throw new Error("NOT_FOUND");
     return toReminder(row);
   }
 
   cancel(taskId: string): void {
     const now = this.clock().toISOString();
-    this.database.prepare("UPDATE reminders SET status = 'cancelled', updated_at = ? WHERE task_id = ? AND status = 'scheduled'")
+    this.database
+      .prepare(
+        "UPDATE reminders SET status = 'cancelled', updated_at = ? WHERE task_id = ? AND status = 'scheduled'",
+      )
       .run(now, taskId);
   }
 
   markMissedBefore(cutoff: Date): number {
     const now = this.clock().toISOString();
-    return this.database.prepare("UPDATE reminders SET status = 'missed', updated_at = ? WHERE status = 'scheduled' AND scheduled_at < ?")
+    return this.database
+      .prepare(
+        "UPDATE reminders SET status = 'missed', updated_at = ? WHERE status = 'scheduled' AND scheduled_at < ?",
+      )
       .run(now, cutoff.toISOString()).changes;
   }
 
-  listDue(now: Date): ReminderView[] {
-    const rows = this.database.prepare(`
-      SELECT r.*, t.title, t.due_date, t.due_time FROM reminders r
-      JOIN tasks t ON t.id = r.task_id
-      WHERE r.status = 'scheduled' AND r.scheduled_at <= ? AND t.status = 'open'
-      ORDER BY r.scheduled_at ASC, r.id ASC
-    `).all(now.toISOString()) as DueRow[];
-    return rows.map((row) => reminderViewSchema.parse({
+  private view(row: DueRow): ReminderView | null {
+    const calculated = reminderAt(
+      row.due_date,
+      row.due_time,
+      row.task_time_zone,
+    );
+    if (
+      !calculated ||
+      calculated.toISOString() !== row.scheduled_at ||
+      row.time_zone !== row.task_time_zone
+    )
+      return null;
+    const result = reminderViewSchema.safeParse({
       id: row.id,
       taskId: row.task_id,
       title: row.title,
       dueDate: row.due_date,
       dueTime: row.due_time,
       scheduledAt: row.scheduled_at,
-    }));
+    });
+    return result.success ? result.data : null;
   }
 
-  claim(id: string): ReminderView | null {
-    const now = this.clock().toISOString();
-    const changed = this.database.prepare("UPDATE reminders SET status = 'fired', fired_at = ?, updated_at = ? WHERE id = ? AND status = 'scheduled'")
-      .run(now, now, id);
-    if (changed.changes === 0) return null;
-    const row = this.database.prepare(`
-      SELECT r.*, t.title, t.due_date, t.due_time FROM reminders r JOIN tasks t ON t.id = r.task_id WHERE r.id = ?
-    `).get(id) as DueRow;
-    return reminderViewSchema.parse({
-      id: row.id, taskId: row.task_id, title: row.title,
-      dueDate: row.due_date, dueTime: row.due_time, scheduledAt: row.scheduled_at,
+  listDue(now: Date): ReminderView[] {
+    const rows = this.database
+      .prepare(
+        `
+      SELECT r.*, t.title, t.due_date, t.due_time, t.time_zone AS task_time_zone FROM reminders r
+      JOIN tasks t ON t.id = r.task_id
+      WHERE r.status = 'scheduled' AND r.scheduled_at <= ? AND t.status = 'open'
+      ORDER BY r.scheduled_at ASC, r.id ASC
+    `,
+      )
+      .all(now.toISOString()) as DueRow[];
+    return rows.flatMap((row) => {
+      const view = this.view(row);
+      return view ? [view] : [];
     });
   }
 
+  claim(id: string, expectedScheduledAt?: string): ReminderView | null {
+    return this.database.transaction(() => {
+      const row = this.database
+        .prepare(
+          `
+        SELECT r.*, t.title, t.due_date, t.due_time, t.time_zone AS task_time_zone FROM reminders r
+        JOIN tasks t ON t.id = r.task_id WHERE r.id = ? AND r.status = 'scheduled' AND t.status = 'open'
+      `,
+        )
+        .get(id) as DueRow | undefined;
+      if (
+        !row ||
+        (expectedScheduledAt && row.scheduled_at !== expectedScheduledAt)
+      )
+        return null;
+      const view = this.view(row);
+      if (!view) return null;
+      const now = this.clock().toISOString();
+      const changed = this.database
+        .prepare(
+          "UPDATE reminders SET status = 'fired', fired_at = ?, updated_at = ? WHERE id = ? AND status = 'scheduled' AND scheduled_at = ?",
+        )
+        .run(now, now, id, row.scheduled_at);
+      return changed.changes ? view : null;
+    })();
+  }
+
+  // Historical database query; never used to initialize the session inventory.
   listActive(): ReminderView[] {
-    const rows = this.database.prepare(`
-      SELECT r.*, t.title, t.due_date, t.due_time FROM reminders r JOIN tasks t ON t.id = r.task_id
-      WHERE r.status = 'fired' ORDER BY r.scheduled_at ASC, r.id ASC
-    `).all() as DueRow[];
-    return rows.map((row) => reminderViewSchema.parse({
-      id: row.id, taskId: row.task_id, title: row.title,
-      dueDate: row.due_date, dueTime: row.due_time, scheduledAt: row.scheduled_at,
-    }));
+    const rows = this.database
+      .prepare(
+        `
+      SELECT r.*, t.title, t.due_date, t.due_time, t.time_zone AS task_time_zone FROM reminders r JOIN tasks t ON t.id = r.task_id
+      WHERE r.status = 'fired' AND t.status = 'open' ORDER BY r.scheduled_at ASC, r.id ASC
+    `,
+      )
+      .all() as DueRow[];
+    return rows.flatMap((row) => {
+      const view = this.view(row);
+      return view ? [view] : [];
+    });
   }
 }

@@ -10,6 +10,8 @@ import {
   recoverySummarySchema,
   recoveryCandidatesSchema,
   taskPatchSchema,
+  activeReminderStateSchema,
+  dismissActiveReminderSchema,
 } from "@acenote/contracts";
 import type { CaptureService } from "./capture-service";
 import type { LifecycleService } from "./lifecycle-service";
@@ -41,7 +43,10 @@ export function registerCaptureIpc(service: CaptureService): void {
 
 export function registerEditorIpc(
   repository: import("./task-repository").TaskRepository,
-  onUpdated?: (id: string) => void,
+  onUpdated?: (
+    id: string,
+    task: import("@acenote/contracts").LifecycleTask,
+  ) => void,
 ): void {
   ipcMain.handle(
     "editor:update",
@@ -52,16 +57,27 @@ export function registerEditorIpc(
         taskPatchSchema.parse(patch),
         revisionSchema.parse(revision),
       );
-      onUpdated?.(parsedId);
+      try {
+        onUpdated?.(parsedId, task);
+      } catch {
+        /* The task is already committed. */
+      }
       return task;
     },
   );
 }
 
-export function registerReminderIpc(): void {
-  ipcMain.handle("reminder:dismiss", (_event, reminderId: unknown) => {
-    z.uuid().parse(reminderId);
-  });
+export function registerReminderIpc(
+  service: import("./active-reminder-service").ActiveReminderService,
+): void {
+  ipcMain.handle("reminder:active", () =>
+    activeReminderStateSchema.parse(service.getActiveReminders()),
+  );
+  ipcMain.handle("reminder:dismiss", (_event, reference: unknown) =>
+    activeReminderStateSchema.parse(
+      service.dismissReminder(dismissActiveReminderSchema.parse(reference)),
+    ),
+  );
 }
 
 export function registerLifecycleIpc(service: LifecycleService): void {

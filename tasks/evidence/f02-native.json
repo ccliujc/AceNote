@@ -1,0 +1,114 @@
+{
+  "date": "2026-11-05",
+  "method": "实际 Electron 生产构建，独立 userData，真实系统时钟与默认 15 秒调度；通过 sendInputEvent / insertText 操作窗口和卡片，改期及旧关闭引用通过真实 preload / IPC 调用；capturePage 内容截图。",
+  "first": {
+    "stage": "first",
+    "passed": true,
+    "platform": "darwin",
+    "arch": "arm64",
+    "systemVersion": "14.4.1",
+    "electron": "33.2.1",
+    "sqliteABI": "130",
+    "userData": "/tmp/acenote-f02-native/user-data",
+    "original": {
+      "sessionId": "c74777ee-7d3b-468d-bc02-bb4c736131c1",
+      "revision": 2,
+      "reminders": [
+        {
+          "activationId": "78c51278-0117-4f2d-a32f-fd1e40c5cfe4",
+          "reminder": {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "taskId": "11111111-1111-4111-8111-111111111111",
+            "title": "验收提醒A",
+            "dueDate": "2026-11-05",
+            "dueTime": "11:36",
+            "scheduledAt": "2026-11-05T03:36:00.000Z"
+          }
+        },
+        {
+          "activationId": "e754b6d3-a623-4885-8d6e-f5147fb0b282",
+          "reminder": {
+            "id": "55555555-5555-4555-8555-555555555555",
+            "taskId": "22222222-2222-4222-8222-222222222222",
+            "title": "验收留存B",
+            "dueDate": "2026-11-05",
+            "dueTime": "11:36",
+            "scheduledAt": "2026-11-05T03:36:00.000Z"
+          }
+        }
+      ]
+    },
+    "current": {
+      "sessionId": "c74777ee-7d3b-468d-bc02-bb4c736131c1",
+      "revision": 4,
+      "reminders": [
+        {
+          "activationId": "e754b6d3-a623-4885-8d6e-f5147fb0b282",
+          "reminder": {
+            "id": "55555555-5555-4555-8555-555555555555",
+            "taskId": "22222222-2222-4222-8222-222222222222",
+            "title": "验收留存B",
+            "dueDate": "2026-11-05",
+            "dueTime": "11:36",
+            "scheduledAt": "2026-11-05T03:36:00.000Z"
+          }
+        },
+        {
+          "activationId": "39241bdd-fb0a-4fda-8f3b-973064b5856b",
+          "reminder": {
+            "id": "44444444-4444-4444-8444-444444444444",
+            "taskId": "11111111-1111-4111-8111-111111111111",
+            "title": "验收提醒A",
+            "dueDate": "2026-11-05",
+            "dueTime": "11:37",
+            "scheduledAt": "2026-11-05T03:37:00.000Z"
+          }
+        }
+      ]
+    },
+    "changedTask": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "rawText": "验收提醒A",
+      "title": "验收提醒A",
+      "recordedAt": "2026-11-05T03:35:11.133Z",
+      "recordDate": "2026-11-05",
+      "dueDate": "2026-11-05",
+      "dueTime": "11:37",
+      "timeZone": "Asia/Shanghai",
+      "contact": null,
+      "parseStatus": "succeeded",
+      "parseError": null,
+      "createdAt": "2026-11-05T03:35:11.133Z",
+      "updatedAt": "2026-11-05T03:36:28.764Z",
+      "editedAt": "2026-11-05T03:36:28.764Z",
+      "revision": 2,
+      "status": "open",
+      "completedAt": null,
+      "completionDate": null,
+      "completionTimeZone": null,
+      "archivedAt": null
+    },
+    "activeAtExit": 1,
+    "parserRequests": 0,
+    "draftsPreserved": true,
+    "independentClose": true,
+    "startupWindowCount": 1,
+    "errors": []
+  },
+  "second": {
+    "stage": "second",
+    "passed": true,
+    "platform": "darwin",
+    "arch": "arm64",
+    "systemVersion": "14.4.1",
+    "electron": "33.2.1",
+    "sqliteABI": "130",
+    "userData": "/tmp/acenote-f02-native/user-data",
+    "activeAtExit": 0,
+    "parserRequests": 0,
+    "draftsPreserved": true,
+    "independentClose": true,
+    "startupWindowCount": 1,
+    "errors": []
+  }
+}
