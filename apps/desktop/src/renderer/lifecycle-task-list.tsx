@@ -1,4 +1,4 @@
-import type { LifecycleTask, TaskStatusFilter } from '@acenote/contracts';
+import type { LifecycleTask, TaskStatusFilter } from "@acenote/contracts";
 
 interface LifecycleTaskListProps {
   tasks: LifecycleTask[];
@@ -12,10 +12,11 @@ interface LifecycleTaskListProps {
   onArchive: (task: LifecycleTask) => void;
   onRestore: (task: LifecycleTask) => void;
   onEdit: (task: LifecycleTask) => void;
+  onReparse?: (task: LifecycleTask) => void;
 }
 
 function overdue(task: LifecycleTask, today: string, nowTime: string): boolean {
-  if (task.status !== 'open' || !task.dueDate) return false;
+  if (task.status !== "open" || !task.dueDate) return false;
   if (task.dueDate < today) return true;
   return (
     task.dueDate === today && Boolean(task.dueTime && task.dueTime < nowTime)
@@ -23,9 +24,9 @@ function overdue(task: LifecycleTask, today: string, nowTime: string): boolean {
 }
 
 const labels = {
-  open: '未完成',
-  completed: '已完成',
-  archived: '已归档',
+  open: "未完成",
+  completed: "已完成",
+  archived: "已归档",
 } as const;
 
 export function LifecycleTaskList({
@@ -33,13 +34,14 @@ export function LifecycleTaskList({
   loading,
   busyId,
   selectedId,
-  filter = 'all',
+  filter = "all",
   onShowAll,
   today,
   nowTime,
   onArchive,
   onRestore,
   onEdit,
+  onReparse,
 }: LifecycleTaskListProps) {
   if (loading)
     return (
@@ -48,7 +50,7 @@ export function LifecycleTaskList({
         <p>正在取出这一天的记录…</p>
       </div>
     );
-  if (tasks.length === 0 && filter !== 'all')
+  if (tasks.length === 0 && filter !== "all")
     return (
       <div className="empty-state">
         <span className="tennis-ball" />
@@ -71,12 +73,12 @@ export function LifecycleTaskList({
     <div className="task-list">
       {tasks.map((task, index) => (
         <article
-          className={`task-card lifecycle-${task.status} ${selectedId === task.id ? 'task-selected' : ''}`}
+          className={`task-card lifecycle-${task.status} ${selectedId === task.id ? "task-selected" : ""}`}
           key={task.id}
           aria-label={task.title}
         >
           <div className="task-number">
-            {String(index + 1).padStart(2, '0')}
+            {String(index + 1).padStart(2, "0")}
           </div>
           <div className="task-body">
             <div className="task-title-row">
@@ -91,7 +93,7 @@ export function LifecycleTaskList({
               {task.dueDate && (
                 <span>
                   截止 {task.dueDate}
-                  {task.dueTime ? ` ${task.dueTime}` : ''}
+                  {task.dueTime ? ` ${task.dueTime}` : ""}
                 </span>
               )}
               {task.contact && <span>对接 {task.contact}</span>}
@@ -103,13 +105,22 @@ export function LifecycleTaskList({
             {task.parseError && (
               <p className="parse-error">
                 原文已保存。
-                {task.parseError === 'PARSE_NOT_CONFIGURED'
-                  ? '配置 DeepSeek 后即可识别。'
-                  : '可重新识别或手动编辑。'}
+                {task.parseError === "PARSE_NOT_CONFIGURED"
+                  ? "配置 DeepSeek 后即可识别。"
+                  : "可重新识别或手动编辑。"}
               </p>
             )}
           </div>
           <div className="task-actions">
+            {onReparse && (
+              <button
+                className="text-button"
+                disabled={busyId === task.id}
+                onClick={() => onReparse(task)}
+              >
+                重新识别
+              </button>
+            )}
             <button
               className="text-button"
               disabled={busyId === task.id}
@@ -117,22 +128,22 @@ export function LifecycleTaskList({
             >
               编辑
             </button>
-            {task.status === 'open' && (
+            {task.status === "open" && (
               <button
                 className="text-button"
                 disabled={Boolean(busyId)}
                 onClick={() => onArchive(task)}
               >
-                {busyId === task.id ? '归档中…' : '归档'}
+                {busyId === task.id ? "归档中…" : "归档"}
               </button>
             )}
-            {task.status !== 'open' && (
+            {task.status !== "open" && (
               <button
                 className="text-button"
                 disabled={Boolean(busyId)}
                 onClick={() => onRestore(task)}
               >
-                {busyId === task.id ? '恢复中…' : '恢复'}
+                {busyId === task.id ? "恢复中…" : "恢复"}
               </button>
             )}
           </div>

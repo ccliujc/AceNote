@@ -12,6 +12,8 @@ import {
   taskPatchSchema,
   activeReminderStateSchema,
   dismissActiveReminderSchema,
+  taskReparseRequestSchema,
+  taskReparseOutcomeSchema,
 } from "@acenote/contracts";
 import type { CaptureService } from "./capture-service";
 import type { LifecycleService } from "./lifecycle-service";
@@ -76,6 +78,16 @@ export function registerReminderIpc(
   ipcMain.handle("reminder:dismiss", (_event, reference: unknown) =>
     activeReminderStateSchema.parse(
       service.dismissReminder(dismissActiveReminderSchema.parse(reference)),
+    ),
+  );
+}
+
+export function registerTaskReparseIpc(
+  service: import("./task-reparse-service").TaskReparseService,
+): void {
+  ipcMain.handle("task:reparse", async (_event, request: unknown) =>
+    taskReparseOutcomeSchema.parse(
+      await service.reparseTask(taskReparseRequestSchema.parse(request)),
     ),
   );
 }

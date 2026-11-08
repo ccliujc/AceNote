@@ -20,6 +20,10 @@ AceNote 采用“桌宠 + 日程浮窗”为主、完整记录窗口按需打开
 
 桌宠使用越前龙马形象的持拍、左手击球、庆祝三态透明 PNG，头帽比例已适度缩小，主窗口、日程浮窗和球场统一为澳网蓝主题。浮窗支持输入日程和完成指令，手动收起后保留本次会话草稿。窗口均通过上下文隔离的 preload 通信，不增加托盘或开机启动。当前素材和提示词见 [RYOMA-PROPORTIONS.md](apps/desktop/resources/pet/RYOMA-PROPORTIONS.md)，初版来源见 [RYOMA-ASSETS.md](apps/desktop/resources/pet/RYOMA-ASSETS.md)。
 
+完整记录中的“重新识别”可重新提取已有事项的字段。默认“保留修改并识别”只补空缺，不替换已有标题；“覆盖并重新识别”会替换标题、截止信息和对接人，未识别到的可选内容会清空。相对日期仍按原记录时刻和时区计算，已完成、已归档状态及完成统计保持。
+
+重新识别失败时原内容保留，可明确重试或手动编辑。识别期间事项若被其他操作修改，会提示先刷新，再重新选择模式；返回完成指令不会执行完成。字段已保存但提醒同步未完成时会单独提示；结果或刷新未送达时先刷新核对，避免重复操作。重新识别不会清空主窗口或浮窗草稿。
+
 ## 技术栈
 
 - Electron、React、TypeScript、Vite
@@ -120,6 +124,8 @@ npm run openspec -- validate --all --strict --no-interactive
 重新拉取项目后，如需重建 Codex 技能，可运行 `npm run openspec -- init --tools codex --language 简体中文 --profile core --no-animation`；升级开发依赖中的 OpenSpec 版本后，运行 `npm run openspec -- update` 刷新生成的技能文件。
 
 ## 规格与实施
+
+- [F03 已有事项重新识别验收](tasks/verification-f03-task-reparse.md)：已完成；macOS 隔离验收通过，正式规格已同步，变更已归档
 
 - [F02 活动提醒验收](tasks/verification-f02-active-reminders.md)：已完成；macOS 隔离验收通过，正式规格已同步，变更已归档
 - [F01 输入恢复验收](tasks/verification-f01-input-recovery.md)：已完成；正式规格已同步，变更已归档

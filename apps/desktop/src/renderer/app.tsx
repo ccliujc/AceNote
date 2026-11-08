@@ -4,6 +4,7 @@ import type {
   LifecycleApi,
   ReminderApi,
   RecoveryApi,
+  TaskReparseApi,
 } from "@acenote/contracts";
 import { LifecyclePage } from "./lifecycle-page";
 
@@ -14,6 +15,7 @@ declare global {
     reminder: ReminderApi;
     experience: ExperienceApi;
     recovery: RecoveryApi;
+    taskReparse: TaskReparseApi;
   }
 }
 
@@ -25,6 +27,7 @@ export function App() {
       reminderApi={window.reminder}
       experienceApi={window.experience}
       recoveryApi={window.recovery}
+      reparseApi={window.taskReparse}
     />
   );
 }

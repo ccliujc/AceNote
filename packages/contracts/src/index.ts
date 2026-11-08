@@ -3,3 +3,4 @@ export * from "./lifecycle";
 export * from "./reminders";
 export * from "./experience";
 export * from "./recovery";
+export * from "./task-reparse";

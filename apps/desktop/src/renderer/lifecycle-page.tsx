@@ -10,6 +10,7 @@ import type {
   ReminderApi,
   TaskStatusFilter,
   RecoveryApi,
+  TaskReparseApi,
 } from "@acenote/contracts";
 import { DateNavigator, todayLocal } from "./date-navigator";
 import { CaptureComposer } from "./capture-composer";
@@ -18,6 +19,7 @@ import { CompletionPicker } from "./completion-picker";
 import { CourtView } from "./court-view";
 import { ActiveReminderCenter } from "./active-reminder-center";
 import { TaskEditor } from "./task-editor";
+import { TaskReparseDialog } from "./task-reparse-dialog";
 import { RecoverableInputs } from "./recoverable-inputs";
 import { useInputInvalidation } from "./use-input-invalidation";
 
@@ -27,6 +29,7 @@ interface LifecyclePageProps {
   reminderApi: ReminderApi;
   experienceApi: ExperienceApi;
   recoveryApi?: RecoveryApi;
+  reparseApi?: TaskReparseApi;
 }
 const filters = [
   ["all", "全部"],
@@ -45,6 +48,7 @@ export function LifecyclePage({
   reminderApi,
   experienceApi,
   recoveryApi,
+  reparseApi,
 }: LifecyclePageProps) {
   const [date, setDate] = useState(todayLocal());
   const [status, setStatus] = useState<TaskStatusFilter>("all");
@@ -71,6 +75,7 @@ export function LifecyclePage({
   } | null>(null);
   const [selectionError, setSelectionError] = useState("");
   const [editing, setEditing] = useState<LifecycleTask | null>(null);
+  const [reparsing, setReparsing] = useState<LifecycleTask | null>(null);
   const request = useRef(0);
   const inputLock = useRef(false);
   const taskLock = useRef(false);
@@ -372,12 +377,13 @@ export function LifecyclePage({
               busyId={busyId}
               today={today}
               nowTime={new Date().toTimeString().slice(0, 5)}
-              selectedId={editing?.id}
+              selectedId={editing?.id ?? reparsing?.id}
               filter={status}
               onShowAll={() => setStatus("all")}
               onArchive={(task) => void changeStatus(task, "archive")}
               onRestore={(task) => void changeStatus(task, "restore")}
               onEdit={setEditing}
+              onReparse={reparseApi ? setReparsing : undefined}
             />
           )}
         </section>
@@ -388,7 +394,7 @@ export function LifecyclePage({
           <span>ACE THE EVERYDAY</span>
         </footer>
         <ActiveReminderCenter api={reminderApi} />
-        {selection && !editing && (
+        {selection && !editing && !reparsing && (
           <CompletionPicker
             candidates={selection.candidates}
             busy={busy}
@@ -419,6 +425,34 @@ export function LifecyclePage({
                 inputLock.current = false;
                 setBusy(false);
               }
+            }}
+          />
+        )}
+        {reparsing && reparseApi && !editing && (
+          <TaskReparseDialog
+            key={reparsing.id}
+            task={reparsing}
+            api={reparseApi}
+            lifecycle={api}
+            onClose={() => setReparsing(null)}
+            onUpdated={(outcome) => {
+              setSnapshot((previous) =>
+                previous?.date === outcome.task.recordDate
+                  ? {
+                      ...previous,
+                      tasks: previous.tasks.map((task) =>
+                        task.id === outcome.task.id ? outcome.task : task,
+                      ),
+                    }
+                  : previous,
+              );
+              setReparsing(null);
+              setNotice(
+                outcome.warning
+                  ? "字段已更新，但提醒计划同步未完成，请核对截止信息。"
+                  : "重新识别已保存。",
+              );
+              void latestRefresh.current();
             }}
           />
         )}

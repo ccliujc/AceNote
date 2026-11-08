@@ -18,6 +18,8 @@ import type {
   RecoveryApi,
   RecoverableInput,
   RecoveryCandidates,
+  TaskReparseApi,
+  TaskReparseOutcome,
 } from "@acenote/contracts";
 // Sandboxed Electron preloads must be self-contained (no relative require).
 function createRecoverySummaryApi(): RecoverySummaryApi {
@@ -231,3 +233,9 @@ const recovery: RecoveryApi = {
     ) as Promise<RecoveryCandidates>,
 };
 contextBridge.exposeInMainWorld("recovery", recovery);
+
+const taskReparse: TaskReparseApi = {
+  reparseTask: (request) =>
+    ipcRenderer.invoke("task:reparse", request) as Promise<TaskReparseOutcome>,
+};
+contextBridge.exposeInMainWorld("taskReparse", taskReparse);

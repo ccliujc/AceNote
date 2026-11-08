@@ -4,6 +4,8 @@
 
 2026-10-30 用户修订：明确时刻省略日期时默认提交当天，详见 [SPEC-time-only-today.md](SPEC-time-only-today.md)。
 
+2026-11-08：F03 已接入当前完整记录的已有事项重新识别，见 [验收记录](../tasks/verification-f03-task-reparse.md) 与 [增量规格](../openspec/changes/archive/2026-11-08-reparse-existing-tasks/specs/capture/spec.md)。保留模式统一按当前空缺补充，非空标题保持；覆盖需明确选择，识别沿用原记录时刻和时区，版本冲突拒绝晚到结果。失败不改原字段或输入记录，三态及完成统计保持；不增加数据库迁移。正式 Requirements 已同步，变更已归档。
+
 ## 目标
 
 让本地单用户通过一句文字快速记录事项。系统必须先可靠保存原文，再调用 DeepSeek 提取任务标题、截止时间和对接人，并允许用户核对和修改识别结果。
@@ -102,8 +104,8 @@
 
 ```ts
 type ParseIntentResult =
-  | { intent: 'create'; task: ParsedTask }
-  | { intent: 'complete'; completionTarget: string };
+  | { intent: "create"; task: ParsedTask }
+  | { intent: "complete"; completionTarget: string };
 ```
 
 - `create` 的 `task` 必须通过现有 `ParsedTask` 严格 schema，禁止包含记录时间或任务状态。
@@ -176,7 +178,10 @@ AceNote/
 const parsedTaskSchema = z.object({
   title: z.string().trim().min(1).max(200),
   dueDate: z.iso.date().nullable(),
-  dueTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable(),
+  dueTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .nullable(),
   contact: z.string().trim().min(1).max(100).nullable(),
 });
 

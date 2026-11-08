@@ -3,6 +3,9 @@ export default {
   reporter: ["text", "html"],
   include: [
     "src/main/task-repository.ts",
+    "src/main/task-reparse-fields.ts",
+    "src/main/task-reparse-service.ts",
+    "src/renderer/task-reparse-dialog.tsx",
     "src/main/intake-repository.ts",
     "src/main/lifecycle-service.ts",
     "src/renderer/recoverable-inputs.tsx",

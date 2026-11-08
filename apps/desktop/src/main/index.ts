@@ -10,11 +10,13 @@ import {
   registerLifecycleIpc,
   registerReminderIpc,
   registerRecoveryIpc,
+  registerTaskReparseIpc,
 } from "./ipc";
 import { ReminderRepository } from "./reminder-repository";
 import { ReminderService } from "./reminder-service";
 import { ReminderScheduler } from "./reminder-scheduler";
 import { ActiveReminderService } from "./active-reminder-service";
+import { TaskReparseService } from "./task-reparse-service";
 import { WindowManager } from "./windows/window-manager";
 import { registerApplicationLifecycle } from "./application-lifecycle";
 import {
@@ -62,6 +64,12 @@ void app.whenReady().then(() => {
     },
   );
   lifecycleService.recoverInterrupted();
+  const taskReparse = new TaskReparseService(repository, createIntentParser(), {
+    onTaskChanged: (task) => activeReminders.reconcileTask(task),
+    syncTask: (id) => reminderService.syncTask(id),
+    onChanged: () => windows.broadcast("data:changed", { reason: "updated" }),
+  });
+  registerTaskReparseIpc(taskReparse);
   registerEditorIpc(repository, (id, task) => {
     activeReminders.reconcileTask(task);
     try {
@@ -81,6 +89,7 @@ void app.whenReady().then(() => {
   });
 
   registerApplicationLifecycle(app, windows, () => {
+    taskReparse.stop();
     lifecycleService.stop();
     scheduler.stop();
     activeReminders.stop();

@@ -1703,6 +1703,11 @@ button {
   font-size: 12px;
   padding: 2px 4px 8px;
 }
+.workspace-content::after {
+  content: "";
+  display: block;
+  height: var(--reminder-clearance, 0px);
+}
 .reminder-state {
   margin: 2px 4px;
   font-size: 12px;
